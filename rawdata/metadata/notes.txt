@@ -1,0 +1,3 @@
+554 preassembled H. pylori genomes from NCBI
+-> 179 are from gastric cancer tissue
+-> 375 are from non-gastric cancer biopsies
