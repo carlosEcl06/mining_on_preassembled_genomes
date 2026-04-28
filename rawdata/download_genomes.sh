@@ -6,7 +6,7 @@ datasets download genome accession --inputfile acessos.txt --include genome
 unzip -q ncbi_dataset.zip
 
 # 3. Organizar, compactar e mostrar progresso com verificação de existência
-mkdir -p fastas_prontos
+mkdir -p fastas
 
 total=$(find ncbi_dataset/data -name "*.fna" | wc -l)
 atual=0
@@ -14,7 +14,7 @@ atual=0
 find ncbi_dataset/data -name "*.fna" | while read f; do
     atual=$((atual + 1))
     acc=$(echo "$f" | cut -d'/' -f3)
-    arquivo_final="fastas_prontos/${acc}.fasta.gz"
+    arquivo_final="fastas/${acc}.fasta.gz"
     
     # Verifica se o arquivo já existe na pasta de destino
     if [ -f "$arquivo_final" ]; then
@@ -25,7 +25,7 @@ find ncbi_dataset/data -name "*.fna" | while read f; do
     fi
 done
 
-echo -e "\n\nProcesso concluído! Os arquivos estão em 'fastas_prontos/'"
+echo -e "\n\nProcesso concluído! Os arquivos estão em 'fastas/'"
 
 # 4. Limpeza
 rm -rf ncbi_dataset ncbi_dataset.zip acessos.txt

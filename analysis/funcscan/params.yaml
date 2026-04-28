@@ -1,17 +1,19 @@
 input: "samplesheet.csv"
 outdir: "./results"
-multiqc_title: "BGC mining on E coli pre-assembled genomes from gastric cancer and chronic gastritis patients"
+multiqc_title: "BGC mining on 554 pre-assembled E. coli genomes from gastric cancer and chronic gastritis patients"
 
-# Ativa o módulo de triagem de BGCs
+# -------------------------
+# BGC SCREENING CONFIG
+# -------------------------
 run_bgc_screening: true
 bgc_mincontiglength: 3000
 bgc_savefilteredcontigs: true
 
 # -------------------------
-# ANOTAÇÃO FUNCIONAL
+# FUNCTIONAL ANNOTATION CONFIG
 # -------------------------
 annotation_tool: "bakta"
-annotation_bakta_db: "/home/carlos_ecl06/projects/whole_metagenome_plus_barcoding/analysis/wgs-shotgun/funcscan/databases/bakta/db"
+annotation_bakta_db: "/path/to/local/installation/of/bakta/db"
 annotation_bakta_singlemode: true
 annotation_bakta_translationtable: 11
 annotation_bakta_gram: "-"
@@ -34,12 +36,12 @@ annotation_bakta_activate_plot: true
 # -------------------------
 run_protein_annotation: true
 protein_annotation_tool: "InterProScan"
-protein_annotation_interproscan_db: "/home/carlos_ecl06/projects/whole_metagenome_plus_barcoding/analysis/wgs-shotgun/funcscan/databases/interproscan-5.72-103.0"
+protein_annotation_interproscan_db: "/path/to/local/installation/of/interproscan-5.72-103.0"
 
 # -------------------------
 # antiSMASH CONFIG
 # -------------------------
-bgc_antismash_db: "/home/carlos_ecl06/projects/whole_metagenome_plus_barcoding/analysis/wgs-shotgun/funcscan/databases/antismash"
+bgc_antismash_db: "/path/to/local/installation/of/antismash"
 bgc_antismash_contigminlength: 3000
 bgc_antismash_cbgeneral: true
 bgc_antismash_cbknownclusters: true
@@ -55,7 +57,7 @@ bgc_antismash_hmmdetectionstrictness: "relaxed"
 # -------------------------
 # DeepBGC CONFIG
 # -------------------------
-bgc_deepbgc_db: "/home/carlos_ecl06/projects/whole_metagenome_plus_barcoding/analysis/wgs-shotgun/funcscan/databases/deepbgc/data"
+bgc_deepbgc_db: "/path/to/local/installation/of/deepbgc/data"
 bgc_deepbgc_prodigalsinglemode: true
 
 # -------------------------
