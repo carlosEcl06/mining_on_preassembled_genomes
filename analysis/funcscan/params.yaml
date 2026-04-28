@@ -41,7 +41,7 @@ protein_annotation_interproscan_db: "/path/to/local/installation/of/interproscan
 # -------------------------
 # antiSMASH CONFIG
 # -------------------------
-bgc_antismash_db: "/path/to/local/installation/of/antismash"
+bgc_antismash_db: "/dados/felipe/Carlos_temporario/mining_on_preassembled_genomes/analysis/funcscan/pipeline/third_party_databases/antismash"
 bgc_antismash_contigminlength: 3000
 bgc_antismash_cbgeneral: true
 bgc_antismash_cbknownclusters: true
@@ -57,7 +57,7 @@ bgc_antismash_hmmdetectionstrictness: "relaxed"
 # -------------------------
 # DeepBGC CONFIG
 # -------------------------
-bgc_deepbgc_db: "/path/to/local/installation/of/deepbgc/data"
+bgc_deepbgc_db: "/dados/felipe/Carlos_temporario/mining_on_preassembled_genomes/analysis/funcscan/pipeline/third_party_databases/deepbgc/data"
 bgc_deepbgc_prodigalsinglemode: true
 
 # -------------------------

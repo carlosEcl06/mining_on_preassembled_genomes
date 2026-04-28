@@ -1,7 +1,11 @@
 rawdata/fastas/
+rawdata/md5sum.txt
+rawdata/README.md
+
+*.nextflow.log*
 
 analysis/funcscan/work/
 analysis/funcscan/results/
-analysis/funcscan/.nextflow.log*
 
-analysis/funcscan/3_0_0/
+analysis/funcscan/pipeline/
+analysis/funcscan/interprotest/
