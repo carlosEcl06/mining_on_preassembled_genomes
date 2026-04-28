@@ -3,3 +3,5 @@ rawdata/fastas/
 analysis/funcscan/work/
 analysis/funcscan/results/
 analysis/funcscan/.nextflow.log*
+
+analysis/funcscan/3_0_0/
