@@ -13,7 +13,7 @@ bgc_savefilteredcontigs: true
 # FUNCTIONAL ANNOTATION CONFIG
 # -------------------------
 annotation_tool: "bakta"
-annotation_bakta_db: "/path/to/local/installation/of/bakta/db"
+annotation_bakta_db: "/dados/felipe/Carlos_temporario/mining_on_preassembled_genomes/analysis/funcscan/pipeline/third_party_databases/bakta/db"
 annotation_bakta_singlemode: true
 annotation_bakta_translationtable: 11
 annotation_bakta_gram: "-"
@@ -36,7 +36,7 @@ annotation_bakta_activate_plot: true
 # -------------------------
 run_protein_annotation: true
 protein_annotation_tool: "InterProScan"
-protein_annotation_interproscan_db: "/path/to/local/installation/of/interproscan-5.72-103.0"
+protein_annotation_interproscan_db: "/dados/felipe/Carlos_temporario/mining_on_preassembled_genomes/analysis/funcscan/pipeline/third_party_databases/interproscan"
 
 # -------------------------
 # antiSMASH CONFIG
