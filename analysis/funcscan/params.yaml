@@ -36,7 +36,7 @@ annotation_bakta_activate_plot: true
 # -------------------------
 run_protein_annotation: true
 protein_annotation_tool: "InterProScan"
-protein_annotation_interproscan_db: "/dados/felipe/Carlos_temporario/mining_on_preassembled_genomes/analysis/funcscan/pipeline/third_party_databases/interproscan"
+protein_annotation_interproscan_db: "/dados/felipe/Carlos_temporario/mining_on_preassembled_genomes/analysis/funcscan/pipeline/third_party_databases/interproscan/db/interproscan-5.77-108.0"
 
 # -------------------------
 # antiSMASH CONFIG
