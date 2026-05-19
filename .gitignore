@@ -6,5 +6,6 @@ rawdata/README.md
 
 analysis/funcscan/work/
 analysis/funcscan/results/
-
 analysis/funcscan/pipeline/
+
+analysis/R/RMarkdown/render/

@@ -1,0 +1,10 @@
+[2026-05-11 12:21:06,347] multiqc.config                                     [INFO   ]  Loading config settings from: multiqc_config.yml
+[2026-05-11 12:21:06,347] multiqc.config                                     [ERROR  ]  Config 'custom_logo' path not found, skipping (nf-core-funcscan_logo_flat_light.png)
+[2026-05-11 12:21:06,348] multiqc.core.update_config                         [INFO   ]  Report title: BGC mining on 554 pre-assembled E. coli genomes from gastric cancer and chronic gastritis patients
+[2026-05-11 12:21:07,019] multiqc.core.version_check                         [WARNING]  MultiQC Version v1.34 now available!
+[2026-05-11 12:21:07,020] multiqc.core.file_search                           [INFO   ]  Search path: /dados/felipe/Carlos_temporario/mining_on_preassembled_genomes/analysis/funcscan/work/d5/3fed3cbea127e9088b397ab265a273
+[2026-05-11 12:21:07,021] multiqc.core.file_search                           [INFO   ]  Only using modules: custom_content, prokka
+[2026-05-11 12:21:07,090] multiqc.core.special_case_modules.custom_content   [INFO   ]  nf-core-funcscan-methods-description: Found 1 sample (html)
+[2026-05-11 12:21:07,090] multiqc.core.special_case_modules.custom_content   [INFO   ]  nf-core-funcscan-summary: Found 1 sample (html)
+[2026-05-11 12:21:07,102] multiqc.core.file_search                           [INFO   ]  Only using modules: nf-core-funcscan-methods-description, nf-core-funcscan-summary
+[2026-05-11 12:21:07,103] multiqc.core.write_results                         [INFO   ]  Rendering plots. Export plots to formats png, svg, pdf is requested, so it might take a while. To disable plot export, set `export_plots: false` in config, or remove the `--export-plots` command line flag

@@ -1,0 +1,36 @@
+---
+title: "Experimental Design: Mining on Preassembled Genomes"
+subtitle: "Analysis of gastric-cancer related biosynthetic gene clusters"
+author: "LIMA, Carlos; SILVA JUNIOR, Wilson"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    theme: flatly
+    highlight: tango
+    df_print: paged
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo      = TRUE,
+  warning   = FALSE,
+  message   = FALSE,
+  fig.align = "center",
+  fig.width = 7,
+  fig.height = 5
+)
+
+# Load packages
+library(tidyverse)
+```
+
+# Overview
+
+We downloaded 554 preassembled genomes from the NCBI
