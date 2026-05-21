@@ -29,8 +29,121 @@ knitr::opts_chunk$set(
 
 # Load packages
 library(tidyverse)
+
+# Load data
+bgc_table <- read.csv("/home/clima/projects/bgcs_in_cancer/mt/mining_on_preassembled_genomes/analysis/R/copied_from_funcscan_results/combgc_complete_summary.tsv", #nolint
+                      header = TRUE,
+                      sep = "\t")
 ```
 
 # Overview
 
-We downloaded 554 preassembled genomes from the NCBI
+We downloaded 554 preassembled *H. pylori* genomes from the NCBI database, 179 of which were from gastric-cancer related samples.
+The other 375 were from precancerous cases, such as chronic gastritis and intestinal metaplasia.
+
+# Provisional Objectives
+
+1. Agrupar os BGCs com a técnica de Gene Cluster Families (GCFs);
+2. Correlacionar filogenia com repertórios de GCFs;
+3. Comparar o repertórios de GCFs/BGCs entre os genomas categorizados em pré-malignos e câncer;
+4. Identificar as GCFs estatisticamente relacionadas com câncer;
+5. Analisar a relevância biológica do GCFs/BGCs com a progressão tumoral. Ou seja, identificar uma assinatura de malignidade
+baseada nos tipos de GCFs/BGCs;
+6. Por fim, discutir uma abordagem experimental para validação funcional dos GCFs/BGCs em modelo animal.
+
+# Methods
+
+## Genome mining and BGC profiling
+
+We used the *nf-core* pipeline **funcscan** (version 3.0.0, running on Nextflow version
+25.10.4) to perform genome mining on the preassembled genomes. BGC profiling was
+performed with antiSMASH (version 8.0.1), deepBGC (version 0.1.31), and GECCO
+(version 0.9.10). The mining tools' results were aggregated into a single table using
+comBGC, as follows:
+
+```{r display_bgc_table, echo=FALSE}
+library(kableExtra)
+
+knitr::kable(head(bgc_table, 20L)) |>
+  kable_styling() |>
+  scroll_box(width = "100%")
+```
+
+## BGC clustering into GCFs (adapted from Robey et al., 2021)
+
+GCF clustering followed an approach adapted from Robey et al. (2021). Since BiG-SCAPE
+requires antiSMASH-formatted GenBank files and is therefore incompatible with deepBGC
+and GECCO outputs, we implemented a tool-agnostic workflow operating directly on the
+aggregated comBGC summary table, which provides harmonized Pfam domain arrays for all
+BGCs regardless of the prediction tool.
+
+### BGC inventory across tools
+
+The combined dataset comprised `r nrow(bgc_table)` BGC predictions across 554 genomes.
+antiSMASH predicted three product classes: Terpene-precursor (n = 554, one locus per
+genome), Azole-containing-RiPP (n = 19), and Arylpolyene (n = 1). deepBGC predictions
+spanned Polyketide (n = 134), Saccharide (n = 125), Other (n = 83), RiPP (n = 61),
+and NRP (n = 50), alongside 1,007 BGCs for which the model assigned high detection
+probability (mean = 0.59, max = 0.92) but no product class — likely reflecting the
+atypical secondary metabolome of *H. pylori* that falls outside the product classes
+represented in the deepBGC training data. GECCO predicted 36 Unknown and 1 RiPP BGCs.
+
+### Pre-clustering filters
+
+Prior to similarity computation, the following filters were applied:
+
+1. **deepBGC probability threshold**: deepBGC BGCs with `BGC_probability` < 0.50 were
+   excluded, retaining only predictions at or above the tool's recommended detection
+   threshold (Hannigan et al., 2019).
+
+2. **Unclassified deepBGC BGCs**: the deepBGC predictions without a product class
+   assignment were retained as a separate `Unknown` class and processed using Jaccard
+   similarity only (see below).
+
+3. **GECCO Unknown BGCs**: retained and processed as `Unknown` class alongside the
+   unclassified deepBGC predictions.
+
+### Domain annotation
+
+Pfam domain arrays for each BGC were extracted from the `PFAM_domains` column of the
+comBGC summary. For BGCs predicted by antiSMASH, domain annotations were derived from
+hmmsearch results against the Pfam database as part of the funcscan/antiSMASH workflow.
+For deepBGC and GECCO predictions, Pfam domains were assigned during the annotation
+step executed upstream by funcscan.
+
+### Pairwise similarity scoring
+
+For each pair of BGCs, Pfam domain arrays were compared using Jaccard similarity,
+computed with the Python package `scikit-learn`. Pairs with Jaccard similarity below
+0.1 were excluded from further analysis.
+
+Given the restricted biosynthetic repertoire of *H. pylori* — dominated by
+Terpene-precursor, RiPP, and Arylpolyene clusters with limited canonical PKS or NRPS
+backbone architecture — two similarity regimes were applied:
+
+- **BGCs with identifiable backbone domains** (terpene synthases: PT_FPPS_like,
+  PF02353; NRPS condensation-like: PF01135): the full Robey et al. score was applied,
+
+$$\text{Similarity Score} = \sqrt{0.8 \times \text{sequence identity} + 0.2 \times \text{Jaccard similarity}}$$
+
+  where sequence identity between backbone domains was estimated via `hmmalign` profile
+  alignments. When multiple copies of a domain were present in a pair, the Hungarian
+  matching algorithm was used to identify the highest-similarity domain pairing
+  configuration, following Robey et al. (2021).
+
+- **BGCs without backbone domains** (Unknown class and RiPP/Arylpolyene BGCs lacking
+  canonical backbone enzymes): similarity was computed from Jaccard distance alone,
+
+$$\text{Similarity Score} = \sqrt{0.2 \times \text{Jaccard similarity}}$$
+
+### GCF delineation
+
+DBSCAN clustering (epsilon = 0.50, min_samples = 2) was applied to the pairwise
+distance matrix (distance = 1 − Similarity Score). BGCs that did not meet the minimum
+neighborhood density criterion (DBSCAN label = −1) were designated as singletons and
+not assigned to any GCF.
+
+```{r gcf_clustering, echo=FALSE}
+# TODO: load GCF clustering output
+# gcf_assignments <- read.csv("path/to/gcf_assignments.tsv", sep = "\t")
+```
