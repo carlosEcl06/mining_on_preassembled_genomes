@@ -19,6 +19,7 @@ import numpy as np
 import pandas as pd
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.metrics import pairwise_distances
+from tqdm import tqdm
 
 
 MIN_JACCARD = 0.10
@@ -100,20 +101,26 @@ def main():
     n_pairs_total    = len(np.triu_indices(n, k=1)[0])
     n_pairs_retained = mask.sum()
     print(f"[02] {n_pairs_retained:,} / {n_pairs_total:,} pairs retained "
-          f"({100 * n_pairs_retained / n_pairs_total:.1f}%).", flush=True)
+        f"({100 * n_pairs_retained / n_pairs_total:.1f}%).", flush=True)
 
-    # --- output ---
+    # --- output with progress bar ---
     bgc_ids = df["bgc_id"].to_numpy()
-    pairs = pd.DataFrame({
-        "bgc_i":   bgc_ids[rows_idx],
-        "bgc_j":   bgc_ids[cols_idx],
-        "jaccard": values.round(6),
-    })
-
+    chunk_size = 100_000
     pathlib.Path(args.output).parent.mkdir(parents=True, exist_ok=True)
-    pairs.to_csv(args.output, sep="\t", index=False)
-    print(f"[02] Output written to {args.output}", flush=True)
 
+    with open(args.output, "w") as fh:
+        fh.write("bgc_i\tbgc_j\tjaccard\n")
+        for start in tqdm(range(0, len(rows_idx), chunk_size),
+                        desc="[02] Writing pairs", unit="chunk"):
+            end = start + chunk_size
+            chunk = pd.DataFrame({
+                "bgc_i":   bgc_ids[rows_idx[start:end]],
+                "bgc_j":   bgc_ids[cols_idx[start:end]],
+                "jaccard": values[start:end].round(6),
+            })
+            chunk.to_csv(fh, sep="\t", index=False, header=False)
+
+    print(f"[02] Output written to {args.output}", flush=True)
 
 if __name__ == "__main__":
     main()

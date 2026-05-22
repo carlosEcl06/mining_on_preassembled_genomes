@@ -1,0 +1,454 @@
+---
+title: "GCF Clustering Results"
+subtitle: "Exploratory analysis of biosynthetic gene cluster families in *H. pylori*"
+author: "LIMA, Carlos; SILVA JUNIOR, Wilson"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    theme: flatly
+    highlight: tango
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo      = FALSE,
+  warning   = FALSE,
+  message   = FALSE,
+  fig.align = "center",
+  fig.width = 8,
+  fig.height = 5
+)
+
+library(tidyverse)
+library(kableExtra)
+
+# --- paths ---
+BASE_DIR    <- "/home/clima/projects/bgcs_in_cancer/mt/mining_on_preassembled_genomes"
+RESULTS_DIR <- file.path(BASE_DIR, "analysis/scripts/results")
+METADATA    <- file.path(BASE_DIR, "rawdata/metadata/gbk_hp_genomes.tsv")
+COMBGC      <- file.path(BASE_DIR, "analysis/R/copied_from_funcscan_results/combgc_complete_summary.tsv")
+
+# --- load data ---
+gcf     <- read_tsv(file.path(RESULTS_DIR, "gcf_assignments.tsv"),  show_col_types = FALSE)
+domains <- read_tsv(file.path(RESULTS_DIR, "bgc_domain_arrays.tsv"), show_col_types = FALSE)
+combgc  <- read_tsv(COMBGC, show_col_types = FALSE)
+meta    <- read_tsv(METADATA, show_col_types = FALSE) |>
+  rename(sample_id = Genome_ID) |>
+  mutate(Phenotype = str_trim(Phenotype),
+         group     = if_else(Phenotype == "Gastric cancer", "Cancer", "Non-cancer"))
+
+# --- join GCF assignments with metadata ---
+gcf_meta <- gcf |>
+  left_join(meta, by = "sample_id")
+
+# --- convenience flags ---
+is_singleton <- gcf_meta$gcf_id == "singleton"
+
+# --- harmonised product class ---
+harmonise_product <- function(x) {
+  case_when(
+    str_detect(x, regex("terpene", ignore_case = TRUE)) ~ "Terpene",
+    str_detect(x, regex("polyketide", ignore_case = TRUE)) ~ "Polyketide",
+    str_detect(x, regex("NRP|NRPS|nrp", ignore_case = FALSE)) ~ "NRP",
+    str_detect(x, regex("RiPP|ripp", ignore_case = TRUE)) ~ "RiPP",
+    str_detect(x, regex("saccharide", ignore_case = TRUE)) ~ "Saccharide",
+    str_detect(x, regex("arylpolyene", ignore_case = TRUE)) ~ "Arylpolyene",
+    str_detect(x, regex("azole", ignore_case = TRUE)) ~ "Azole-RiPP",
+    x == "" | is.na(x) ~ "Unclassified",
+    TRUE ~ "Other"
+  )
+}
+
+gcf_meta <- gcf_meta |>
+  mutate(product_harmonised = harmonise_product(Product_class))
+```
+
+# Overview
+
+```{r overview-table}
+n_raw <- nrow(combgc)
+
+tibble(
+  Metric = c(
+    "Total BGCs predicted (pre-filter)",
+    "Total BGCs (post-filter)",
+    "BGCs assigned to a GCF",
+    "Singletons",
+    "Total GCFs",
+    "Largest GCF (BGCs)",
+    "Median GCF size",
+    "Genomes with metadata"
+  ),
+  Value = c(
+    n_raw,
+    nrow(gcf_meta),
+    sum(!is_singleton),
+    sum(is_singleton),
+    n_distinct(gcf_meta$gcf_id[!is_singleton]),
+    gcf_meta |> filter(!is_singleton) |> count(gcf_id) |> pull(n) |> max(),
+    gcf_meta |> filter(!is_singleton) |> count(gcf_id) |> pull(n) |> median(),
+    sum(!is.na(gcf_meta$Phenotype))
+  )
+) |>
+  knitr::kable() |>
+  kable_styling(full_width = FALSE)
+```
+
+# BGC inventory
+
+## Predictions per tool
+
+```{r tool-barplot}
+gcf_meta |>
+  count(Prediction_tool, gcf_id) |>
+  mutate(assigned = if_else(gcf_id == "singleton", "Singleton", "In GCF")) |>
+  count(Prediction_tool, assigned) |>
+  ggplot(aes(x = Prediction_tool, y = n, fill = assigned)) +
+  geom_col(position = "stack") +
+  scale_fill_manual(values = c("In GCF" = "#2c7bb6", "Singleton" = "#d7191c")) +
+  labs(x = NULL, y = "BGC count", fill = NULL,
+       title = "BGC assignment by prediction tool") +
+  theme_minimal(base_size = 13)
+```
+
+## Product class distribution
+
+```{r product-class}
+gcf_meta |>
+  filter(product_harmonised != "Unclassified") |>
+  count(Prediction_tool, product_harmonised) |>
+  ggplot(aes(x = reorder(product_harmonised, n, sum),
+             y = n,
+             fill = Prediction_tool)) +
+  geom_col(position = "stack") +
+  coord_flip() +
+  labs(x = NULL, y = "BGC count", fill = "Tool",
+       title = "Product class distribution (harmonised)") +
+  theme_minimal(base_size = 13)
+```
+
+# GCF characterization
+
+## GCF size distribution
+
+```{r gcf-size-dist}
+gcf_sizes <- gcf_meta |>
+  filter(!is_singleton) |>
+  count(gcf_id, name = "size")
+
+gcf_sizes |>
+  filter(size <= 50) |>
+  ggplot(aes(x = size)) +
+  geom_histogram(binwidth = 1, fill = "#2c7bb6", color = "white") +
+  labs(x = "GCF size (BGCs)", y = "Number of GCFs",
+       title = "GCF size distribution (≤ 50 BGCs)",
+       subtitle = sprintf("Dominant Terpene-precursor GCF (n = %d) excluded for legibility",
+                          max(gcf_sizes$size))) +
+  theme_minimal(base_size = 13)
+```
+
+## Top 15 GCFs
+
+```{r top-gcfs}
+gcf_meta |>
+  filter(!is_singleton) |>
+  group_by(gcf_id) |>
+  summarise(
+    size              = n(),
+    dominant_backbone = names(sort(table(backbone_class), decreasing = TRUE))[1],
+    dominant_product  = names(sort(table(product_harmonised), decreasing = TRUE))[1],
+    dominant_tool     = names(sort(table(Prediction_tool), decreasing = TRUE))[1],
+    n_tools           = n_distinct(Prediction_tool),
+    .groups           = "drop"
+  ) |>
+  arrange(desc(size)) |>
+  slice_head(n = 15) |>
+  knitr::kable(col.names = c("GCF", "Size", "Dominant backbone",
+                              "Dominant product", "Dominant tool", "Tools")) |>
+  kable_styling(full_width = FALSE) |>
+  scroll_box(width = "100%")
+```
+
+# Clinical context
+
+## BGC richness per genome
+
+Genomes from gastric cancer patients harbour significantly more BGCs per genome
+than non-cancer genomes (Wilcoxon rank-sum test, p < 0.001), suggesting that
+oncogenic *H. pylori* lineages may carry a more diverse biosynthetic repertoire.
+
+```{r bgc-richness}
+richness <- gcf_meta |>
+  filter(!is.na(group)) |>
+  count(sample_id, group, name = "n_bgcs")
+
+wt <- wilcox.test(n_bgcs ~ group, data = richness)
+
+richness |>
+  ggplot(aes(x = group, y = n_bgcs, fill = group)) +
+  geom_boxplot(alpha = 0.7, outlier.shape = 21) +
+  geom_jitter(width = 0.15, alpha = 0.3, size = 1.2) +
+  scale_fill_manual(values = c("Cancer" = "#d7191c", "Non-cancer" = "#2c7bb6")) +
+  annotate("text", x = 1.5, y = max(richness$n_bgcs) * 0.95,
+           label = sprintf("W = %.0f\np = %.4f", wt$statistic, wt$p.value),
+           size = 4) +
+  labs(x = NULL, y = "BGCs per genome", fill = NULL,
+       title = "BGC richness by clinical group") +
+  theme_minimal(base_size = 13) +
+  theme(legend.position = "none")
+```
+
+Cancer genomes have a median of `r median(richness$n_bgcs[richness$group == "Cancer"])`
+BGCs per genome vs `r median(richness$n_bgcs[richness$group == "Non-cancer"])` for
+non-cancer genomes (W = `r wt$statistic`, p = `r format(wt$p.value, digits = 3)`).
+
+## BGC richness per genome — by prediction tool
+
+To assess whether the increased BGC richness in cancer genomes is consistent across
+prediction tools or driven by unclassified deepBGC predictions, the analysis was
+stratified by tool.
+
+```{r bgc-richness-by-tool}
+richness_tool <- gcf_meta |>
+  filter(!is.na(group)) |>
+  count(sample_id, group, Prediction_tool, name = "n_bgcs")
+
+richness_tool |>
+  ggplot(aes(x = group, y = n_bgcs, fill = group)) +
+  geom_boxplot(alpha = 0.7, outlier.shape = 21) +
+  geom_jitter(width = 0.15, alpha = 0.3, size = 1.0) +
+  scale_fill_manual(values = c("Cancer" = "#d7191c", "Non-cancer" = "#2c7bb6")) +
+  facet_wrap(~ Prediction_tool, scales = "free_y") +
+  labs(x = NULL, y = "BGCs per genome", fill = NULL,
+       title = "BGC richness by clinical group — stratified by prediction tool") +
+  theme_minimal(base_size = 12) +
+  theme(legend.position = "none")
+```
+
+````{r bgc-richness-by-tool-tests, cache=TRUE}
+tools <- unique(gcf_meta$Prediction_tool)
+
+map_dfr(tools, function(tool) {
+  sub <- richness_tool |> filter(Prediction_tool == tool)
+
+  # skip if fewer than 2 groups represented
+  if (n_distinct(sub$group) < 2) {
+    return(tibble(Tool = tool, W = NA_real_, p_value = NA_real_, p_adj_BH = NA_real_))
+  }
+
+  wt <- wilcox.test(n_bgcs ~ group, data = sub)
+  tibble(
+    Tool    = tool,
+    W       = wt$statistic,
+    p_value = wt$p.value,
+    p_adj_BH = NA_real_
+  )
+}) |>
+  mutate(p_adj_BH = p.adjust(p_value, method = "BH"),
+         sig = case_when(
+           p_adj_BH < 0.001 ~ "***",
+           p_adj_BH < 0.01  ~ "**",
+           p_adj_BH < 0.05  ~ "*",
+           is.na(p_adj_BH)  ~ "—",
+           TRUE             ~ "ns"
+         ),
+         p_value  = formatC(p_value,  format = "e", digits = 2),
+         p_adj_BH = formatC(p_adj_BH, format = "e", digits = 2)) |>
+  knitr::kable(col.names = c("Tool", "W", "p", "p_adj (BH)", "Sig.")) |>
+  kable_styling(full_width = FALSE)
+````
+
+## GCF richness per genome
+
+```{r gcf-richness}
+gcf_richness <- gcf_meta |>
+  filter(!is_singleton & !is.na(group)) |>
+  distinct(sample_id, gcf_id, group) |>
+  count(sample_id, group, name = "n_gcfs")
+
+wt2 <- wilcox.test(n_gcfs ~ group, data = gcf_richness)
+
+gcf_richness |>
+  ggplot(aes(x = group, y = n_gcfs, fill = group)) +
+  geom_boxplot(alpha = 0.7, outlier.shape = 21) +
+  geom_jitter(width = 0.15, alpha = 0.3, size = 1.2) +
+  scale_fill_manual(values = c("Cancer" = "#d7191c", "Non-cancer" = "#2c7bb6")) +
+  annotate("text", x = 1.5, y = max(gcf_richness$n_gcfs) * 0.95,
+           label = sprintf("W = %.0f\np = %.4f", wt2$statistic, wt2$p.value),
+           size = 4) +
+  labs(x = NULL, y = "GCFs per genome", fill = NULL,
+       title = "GCF richness by clinical group") +
+  theme_minimal(base_size = 13) +
+  theme(legend.position = "none")
+```
+
+Cancer genomes carry a median of `r median(gcf_richness$n_gcfs[gcf_richness$group == "Cancer"])`
+distinct GCFs per genome vs `r median(gcf_richness$n_gcfs[gcf_richness$group == "Non-cancer"])`
+for non-cancer (W = `r wt2$statistic`, p = `r format(wt2$p.value, digits = 3)`).
+
+## GCF prevalence: Cancer vs Non-cancer
+
+For each GCF, prevalence was computed as the fraction of genomes in each clinical group
+carrying at least one BGC assigned to that family. Significance was assessed using
+Fisher's exact test, which handles zero-count cells robustly. P-values were
+adjusted for multiple testing using the Benjamini-Hochberg (FDR) procedure.
+GCFs present exclusively in one group may represent lineage-specific biosynthetic
+signatures of oncogenic *H. pylori* clones.
+
+```{r gcf-prevalence, cache=TRUE}
+n_cancer    <- sum(meta$group == "Cancer",     na.rm = TRUE)
+n_noncancer <- sum(meta$group == "Non-cancer", na.rm = TRUE)
+
+# presence/absence per genome per GCF
+presence <- gcf_meta |>
+  filter(!is_singleton & !is.na(group)) |>
+  distinct(sample_id, gcf_id, group)
+
+# Fisher's exact test per GCF
+fisher_per_gcf <- function(gcf_id_val) {
+  sub <- presence |> filter(gcf_id == gcf_id_val)
+  a <- sum(sub$group == "Cancer")
+  b <- sum(sub$group == "Non-cancer")
+  c <- n_cancer    - a
+  d <- n_noncancer - b
+  mat <- matrix(c(a, b, c, d), nrow = 2)
+  ft  <- fisher.test(mat)
+  tibble(gcf_id      = gcf_id_val,
+         n_cancer    = a,
+         n_noncancer = b,
+         prev_cancer    = a / n_cancer,
+         prev_noncancer = b / n_noncancer,
+         odds_ratio  = ft$estimate,
+         p_value     = ft$p.value)
+}
+
+gcf_stats <- map_dfr(unique(presence$gcf_id), fisher_per_gcf) |>
+  mutate(
+    p_adj = p.adjust(p_value, method = "BH"),
+    diff  = prev_cancer - prev_noncancer,
+    sig   = case_when(
+      p_adj < 0.001 ~ "***",
+      p_adj < 0.01  ~ "**",
+      p_adj < 0.05  ~ "*",
+      TRUE          ~ "ns"
+    )
+  ) |>
+  arrange(desc(abs(diff)))
+
+top20 <- gcf_stats |> slice_head(n = 20)
+
+top20 |>
+  pivot_longer(cols = c(prev_cancer, prev_noncancer),
+               names_to = "group", values_to = "prevalence") |>
+  mutate(group = if_else(group == "prev_cancer", "Cancer", "Non-cancer"),
+         label = if_else(group == "Cancer",
+                         paste0(gcf_id, " ", sig), gcf_id)) |>
+  ggplot(aes(x = reorder(gcf_id, abs(diff)), y = prevalence, fill = group)) +
+  geom_col(position = "dodge") +
+  geom_text(data = top20,
+            aes(x = gcf_id, y = pmax(prev_cancer, prev_noncancer) + 0.02,
+                label = sig),
+            inherit.aes = FALSE, size = 4) +
+  coord_flip() +
+  scale_fill_manual(values = c("Cancer" = "#d7191c", "Non-cancer" = "#2c7bb6")) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(x = NULL, y = "Prevalence", fill = NULL,
+       title = "Top 20 GCFs by prevalence difference (Cancer vs Non-cancer)",
+       caption = "Significance: *** p_adj < 0.001 | ** p_adj < 0.01 | * p_adj < 0.05 | ns") +
+  theme_minimal(base_size = 12)
+```
+
+### GCF details
+
+```{r gcf-detail-table, cache=TRUE}
+# join domains with GCF assignments first
+domains_gcf <- domains |>
+  mutate(bgc_id = paste0(sample_id, "__", contig_id)) |>
+  left_join(gcf |> select(bgc_id, gcf_id), by = "bgc_id")
+
+# dominant domains per GCF (top 5)
+top_domains <- domains_gcf |>
+  filter(gcf_id %in% top20$gcf_id) |>
+  separate_rows(domain_array, sep = "\\|") |>
+  filter(domain_array != "") |>
+  count(gcf_id, domain_array, sort = TRUE) |>
+  group_by(gcf_id) |>
+  slice_max(n, n = 5) |>
+  summarise(top_domains = paste(domain_array, collapse = "; "), .groups = "drop")
+
+# mean BGC probability (deepBGC/GECCO only)
+mean_prob <- gcf_meta |>
+  filter(gcf_id %in% top20$gcf_id & !is.na(BGC_probability)) |>
+  mutate(BGC_probability = as.numeric(BGC_probability)) |>
+  group_by(gcf_id) |>
+  summarise(mean_prob = round(mean(BGC_probability, na.rm = TRUE), 3),
+            .groups = "drop")
+
+# dominant backbone and product
+gcf_char <- gcf_meta |>
+  filter(gcf_id %in% top20$gcf_id) |>
+  group_by(gcf_id) |>
+  summarise(
+    size     = n(),
+    backbone = names(sort(table(backbone_class),     decreasing = TRUE))[1],
+    product  = names(sort(table(product_harmonised), decreasing = TRUE))[1],
+    .groups  = "drop"
+  )
+
+top20 |>
+  select(gcf_id, n_cancer, n_noncancer, prev_cancer, prev_noncancer,
+         odds_ratio, p_value, p_adj, sig) |>
+  left_join(gcf_char,    by = "gcf_id") |>
+  left_join(mean_prob,   by = "gcf_id") |>
+  left_join(top_domains, by = "gcf_id") |>
+  mutate(
+    prev_cancer    = scales::percent(prev_cancer,    accuracy = 0.1),
+    prev_noncancer = scales::percent(prev_noncancer, accuracy = 0.1),
+    odds_ratio     = round(odds_ratio, 2),
+    p_value        = formatC(p_value,  format = "e", digits = 2),
+    p_adj          = formatC(p_adj,    format = "e", digits = 2)
+  ) |>
+  knitr::kable(
+    col.names = c("GCF", "n Cancer", "n Non-cancer",
+                  "Prev. Cancer", "Prev. Non-cancer",
+                  "OR", "p", "p_adj (BH)", "Sig.",
+                  "Size", "Backbone", "Product",
+                  "Mean prob.", "Top domains")
+  ) |>
+  kable_styling(font_size = 11) |>
+  scroll_box(width = "100%")
+```
+
+## Continent distribution
+
+```{r continent}
+meta |>
+  count(Continent, group) |>
+  ggplot(aes(x = Continent, y = n, fill = group)) +
+  geom_col(position = "dodge") +
+  scale_fill_manual(values = c("Cancer" = "#d7191c", "Non-cancer" = "#2c7bb6")) +
+  labs(x = NULL, y = "Genomes", fill = NULL,
+       title = "Sample distribution by continent and clinical group") +
+  theme_minimal(base_size = 13) +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1))
+```
+
+## Age distribution
+
+```{r age}
+meta |>
+  filter(!is.na(Age)) |>
+  mutate(Age = as.numeric(Age)) |>
+  ggplot(aes(x = group, y = Age, fill = group)) +
+  geom_boxplot(alpha = 0.7, outlier.shape = 21) +
+  geom_jitter(width = 0.15, alpha = 0.3, size = 1.2) +
+  scale_fill_manual(values = c("Cancer" = "#d7191c", "Non-cancer" = "#2c7bb6")) +
+  labs(x = NULL, y = "Age (years)", fill = NULL,
+       title = "Age distribution by clinical group") +
+  theme_minimal(base_size = 13) +
+  theme(legend.position = "none")
+```
