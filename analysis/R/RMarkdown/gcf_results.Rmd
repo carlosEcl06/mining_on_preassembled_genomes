@@ -26,11 +26,22 @@ knitr::opts_chunk$set(
 library(tidyverse)
 library(kableExtra)
 
-# --- paths ---
-BASE_DIR    <- "/home/clima/projects/bgcs_in_cancer/mt/mining_on_preassembled_genomes"
-RESULTS_DIR <- file.path(BASE_DIR, "analysis/scripts/results")
-METADATA    <- file.path(BASE_DIR, "rawdata/metadata/gbk_hp_genomes.tsv")
-COMBGC      <- file.path(BASE_DIR, "analysis/R/copied_from_funcscan_results/combgc_complete_summary.tsv")
+# --- paths (relative to analysis/R/RMarkdown) ---
+RESULTS_DIR <- file.path("..", "..", "scripts", "results")
+METADATA    <- file.path("..", "..", "..", "rawdata", "metadata", "gbk_hp_genomes.tsv")
+COMBGC      <- file.path("..", "copied_from_funcscan_results", "combgc_complete_summary.tsv")
+
+# check required files exist
+required_files <- c(
+  file.path(RESULTS_DIR, "gcf_assignments.tsv"),
+  file.path(RESULTS_DIR, "bgc_domain_arrays.tsv"),
+  COMBGC,
+  METADATA
+)
+missing_files <- required_files[!file.exists(required_files)]
+if (length(missing_files) > 0) {
+  stop(sprintf("Required data file(s) not found: %s", paste(missing_files, collapse = ", ")))
+}
 
 # --- load data ---
 gcf     <- read_tsv(file.path(RESULTS_DIR, "gcf_assignments.tsv"),  show_col_types = FALSE)
