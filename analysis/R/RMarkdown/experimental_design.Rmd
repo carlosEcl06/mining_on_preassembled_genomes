@@ -31,7 +31,11 @@ knitr::opts_chunk$set(
 library(tidyverse)
 
 # Load data
-bgc_table <- read.csv("/home/clima/projects/bgcs_in_cancer/mt/mining_on_preassembled_genomes/analysis/R/copied_from_funcscan_results/combgc_complete_summary.tsv", #nolint
+data_path <- file.path("..", "copied_from_funcscan_results", "combgc_complete_summary.tsv")
+if (!file.exists(data_path)) {
+  stop(sprintf("Required data file not found: %s", data_path))
+}
+bgc_table <- read.csv(data_path,
                       header = TRUE,
                       sep = "\t")
 ```
