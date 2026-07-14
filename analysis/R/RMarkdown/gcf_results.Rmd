@@ -320,8 +320,8 @@ fisher_per_gcf <- function(gcf_id_val) {
   tibble(gcf_id      = gcf_id_val,
          n_cancer    = a,
          n_noncancer = b,
-         prev_cancer    = a / n_cancer,
-         prev_noncancer = b / n_noncancer,
+         prev_cancer    = a / .env$n_cancer,
+         prev_noncancer = b / .env$n_noncancer,
          odds_ratio  = ft$estimate,
          p_value     = ft$p.value)
 }
@@ -422,6 +422,206 @@ top20 |>
   kable_styling(font_size = 11) |>
   scroll_box(width = "100%")
 ```
+
+## Adjusting for potential confounders
+
+The prevalence analysis presented above is based on Fisher's exact test, which
+evaluates differences in GCF occurrence between clinical groups without accounting
+for potential confounding variables. However, factors such as geographical origin,
+host age, and the overall biosynthetic repertoire of each genome may influence the
+observed associations.
+
+To assess whether the most prevalent GCFs remain associated with clinical phenotype
+after adjustment, two complementary approaches were applied. First,
+Cochran–Mantel–Haenszel (CMH) tests were performed with continent as a
+stratification variable, providing an association test while controlling for
+geographical structure. Second, multivariable logistic regression models were
+fitted for each of the top-ranked GCFs, modelling GCF presence as a function of
+clinical group while adjusting for continent, host age, and the total number of
+BGCs detected in each genome.
+
+These analyses aim to distinguish associations that are robust to known confounding
+factors from those that may simply reflect differences in population structure or
+overall biosynthetic richness.
+
+```{r gcf_logistic, cache=TRUE}
+# ---------------------------------------------------------------------------
+# Covariates: continent, age, total BGC richness per genome (confounder control)
+# ---------------------------------------------------------------------------
+covars <- meta |>
+  dplyr::select(sample_id, Continent, Age) |>
+  dplyr::mutate(Age = as.numeric(Age))
+
+group_lookup <- meta |>
+  dplyr::select(sample_id, group)
+
+richness_per_genome <- gcf_meta |>
+  dplyr::count(sample_id, name = "n_bgcs_total")
+
+# presence_wide: 'presence' already carries 'group', no conflict here
+presence_wide <- presence |>
+  dplyr::left_join(covars, by = "sample_id") |>
+  dplyr::left_join(richness_per_genome, by = "sample_id") |>
+  dplyr::filter(!is.na(group), !is.na(Continent))
+
+# all_genomes: pull group from group_lookup, avoiding duplicate columns
+all_genomes <- group_lookup |>
+  dplyr::left_join(covars, by = "sample_id") |>
+  dplyr::left_join(richness_per_genome, by = "sample_id") |>
+  dplyr::filter(!is.na(group), !is.na(Continent))
+
+# ---------------------------------------------------------------------------
+# 1. Cochran-Mantel-Haenszel, stratified by continent
+# ---------------------------------------------------------------------------
+cmh_per_gcf <- function(gcf_id_val) {
+  carriers <- presence_wide |> dplyr::filter(gcf_id == gcf_id_val) |> dplyr::pull(sample_id)
+
+  tab_df <- all_genomes |>
+    dplyr::mutate(carrier = sample_id %in% carriers) |>
+    dplyr::count(Continent, group, carrier)
+
+  strata <- unique(tab_df$Continent)
+  arr_list <- list()
+  for (s in strata) {
+    sub <- tab_df |> dplyr::filter(Continent == s)
+    m <- matrix(0, nrow = 2, ncol = 2,
+                dimnames = list(carrier = c("TRUE", "FALSE"),
+                                 group   = c("Cancer", "Non-cancer")))
+    for (i in seq_len(nrow(sub))) {
+      m[as.character(sub$carrier[i]), sub$group[i]] <- sub$n[i]
+    }
+    if (all(rowSums(m) > 0) && all(colSums(m) > 0)) {
+      arr_list[[s]] <- m
+    }
+  }
+
+  if (length(arr_list) < 1) {
+    return(tibble(gcf_id = gcf_id_val, cmh_p = NA_real_, cmh_statistic = NA_real_))
+  }
+
+  arr <- array(unlist(arr_list), dim = c(2, 2, length(arr_list)))
+  res <- tryCatch(mantelhaen.test(arr, correct = TRUE), error = function(e) NULL)
+
+  if (is.null(res)) {
+    return(tibble(gcf_id = gcf_id_val, cmh_p = NA_real_, cmh_statistic = NA_real_))
+  }
+
+  tibble(gcf_id = gcf_id_val,
+         cmh_p         = res$p.value,
+         cmh_statistic = unname(res$statistic))
+}
+
+cmh_results <- purrr::map_dfr(top20$gcf_id, cmh_per_gcf)
+
+# ---------------------------------------------------------------------------
+# 2. Logistic regression: GCF_presence ~ phenotype + continent + age + richness
+# ---------------------------------------------------------------------------
+glm_per_gcf <- function(gcf_id_val) {
+  carriers <- presence_wide |> dplyr::filter(gcf_id == gcf_id_val) |> dplyr::pull(sample_id)
+
+  dat <- all_genomes |>
+    dplyr::mutate(
+      carrier = as.integer(sample_id %in% carriers),
+      group   = factor(group, levels = c("Non-cancer", "Cancer")),
+      Continent = factor(Continent)
+    ) |>
+    dplyr::filter(!is.na(Age))
+
+  if (dplyr::n_distinct(dat$carrier) < 2 || nrow(dat) < 20) {
+    return(tibble(gcf_id = gcf_id_val, glm_or = NA_real_,
+                   glm_p = NA_real_, glm_ci_low = NA_real_, glm_ci_high = NA_real_))
+  }
+
+  fit <- tryCatch(
+    glm(carrier ~ group + Continent + Age + n_bgcs_total,
+        data = dat, family = binomial()),
+    error = function(e) NULL,
+    warning = function(w) suppressWarnings(
+      glm(carrier ~ group + Continent + Age + n_bgcs_total,
+          data = dat, family = binomial())
+    )
+  )
+
+  if (is.null(fit) || !"groupCancer" %in% names(coef(fit))) {
+    return(tibble(gcf_id = gcf_id_val, glm_or = NA_real_,
+                   glm_p = NA_real_, glm_ci_low = NA_real_, glm_ci_high = NA_real_))
+  }
+
+  est <- summary(fit)$coefficients["groupCancer", ]
+  ci  <- tryCatch(confint.default(fit)["groupCancer", ],
+                   error = function(e) c(NA_real_, NA_real_))
+
+  tibble(
+    gcf_id      = gcf_id_val,
+    glm_or      = exp(est["Estimate"]),
+    glm_p       = est["Pr(>|z|)"],
+    glm_ci_low  = exp(ci[1]),
+    glm_ci_high = exp(ci[2])
+  )
+}
+
+glm_results <- purrr::map_dfr(top20$gcf_id, glm_per_gcf)
+
+# ---------------------------------------------------------------------------
+# 3. Combined comparison table
+# ---------------------------------------------------------------------------
+comparison_table <- top20 |>
+  dplyr::select(gcf_id, n_cancer, n_noncancer, odds_ratio,
+         fisher_p = p_value, fisher_p_adj = p_adj) |>
+  dplyr::left_join(cmh_results, by = "gcf_id") |>
+  dplyr::left_join(glm_results, by = "gcf_id") |>
+  dplyr::mutate(
+    cmh_p_adj = p.adjust(cmh_p, method = "BH"),
+    glm_p_adj = p.adjust(glm_p, method = "BH"),
+    fisher_p_adj = formatC(as.numeric(fisher_p_adj), format = "e", digits = 2),
+    cmh_p_adj = formatC(cmh_p_adj, format = "e", digits = 2),
+    glm_p_adj = formatC(glm_p_adj, format = "e", digits = 2),
+    odds_ratio = round(odds_ratio, 2),
+    glm_or     = round(glm_or, 2),
+    glm_ci     = sprintf("%.2f–%.2f", glm_ci_low, glm_ci_high)
+  ) |>
+  dplyr::select(gcf_id, n_cancer, n_noncancer,
+         odds_ratio, fisher_p_adj,
+         cmh_p_adj,
+         glm_or, glm_ci, glm_p_adj) |>
+  dplyr::arrange(glm_p_adj)
+
+comparison_table |>
+  knitr::kable(
+    col.names = c("GCF", "n Cancer", "n Non-cancer",
+                  "OR (Fisher)", "p_adj (Fisher)",
+                  "p_adj (CMH, continent-stratified)",
+                  "aOR (GLM)", "95% CI (aOR)", "p_adj (GLM)")
+  ) |>
+  kable_styling(font_size = 11) |>
+  scroll_box(width = "100%")
+```
+
+The adjustment analyses largely reinforced the conclusions obtained from the
+univariate prevalence comparison. None of the top-ranked GCFs remained
+significant after continent stratification (CMH) or multivariable logistic
+regression once corrected for multiple testing. GCF_0014 showed the lowest
+CMH adjusted p-value (p_adj = 0.055), approaching but not crossing the
+conventional significance threshold, and its logistic regression estimate
+(adjusted OR = 3.79, 95% CI: 1.26–11.39) likewise did not remain significant
+after correction (p_adj = 0.176). GCF_0017 showed the highest adjusted odds
+ratio among tested GCFs (aOR = 8.56), but its wide confidence interval and
+non-significant adjusted p-value (p_adj = 0.161) indicate substantial
+uncertainty, likely reflecting the small number of carrier genomes (n = 6
+cancer, n = 5 non-cancer).
+
+Several rare GCFs for which the CMH test could not be computed (insufficient
+strata variation, e.g. GCF_0019, GCF_0031) or which showed extreme regression
+coefficients reflect the very low number of observations rather than a
+robust biological signal, and should be interpreted cautiously.
+
+Overall, the combined results suggest that differences in GCF presence between
+cancer and non-cancer isolates are modest and are largely explained by
+sampling variability and potential population structure rather than robust
+phenotype-specific enrichment. Consequently, no GCF could be confidently
+identified as independently associated with gastric cancer after accounting
+for continent, host age, biosynthetic richness, and multiple hypothesis
+testing.
 
 ## Continent distribution
 
