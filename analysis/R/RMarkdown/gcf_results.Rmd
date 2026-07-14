@@ -373,6 +373,31 @@ top20 |>
   theme_minimal(base_size = 12)
 ```
 
+### Contingency table
+
+The table below presents the raw contingency counts (presence/absence per genome)
+for the top 20 GCFs ranked by prevalence difference, prior to any statistical
+adjustment. These counts form the basis for the Fisher, CMH, and logistic
+regression analyses presented later in this section.
+
+```{r gcf-contingency-table}
+contingency_table <- top20 |>
+  dplyr::mutate(
+    cancer_absent    = .env$n_cancer    - .data$n_cancer,
+    noncancer_absent = .env$n_noncancer - .data$n_noncancer
+  ) |>
+  dplyr::select(gcf_id, n_cancer, cancer_absent, n_noncancer, noncancer_absent)
+
+contingency_table |>
+  knitr::kable(
+    col.names = c("GCF", "Cancer (present)", "Cancer (absent)",
+                  "Non-cancer (present)", "Non-cancer (absent)"),
+    align = "lcccc"
+  ) |>
+  kable_styling(full_width = FALSE, font_size = 11) |>
+  scroll_box(width = "100%")
+```
+
 ### GCF details
 
 ```{r gcf-detail-table, cache=TRUE}
