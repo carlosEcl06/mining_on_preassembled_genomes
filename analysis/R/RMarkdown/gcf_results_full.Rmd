@@ -11,6 +11,10 @@ output:
     theme: flatly
     highlight: tango
     df_print: paged
+  pdf_document:
+    latex_engine: xelatex
+    toc: true
+    toc_depth: 3
 ---
 
 ```{r setup, include=FALSE}
