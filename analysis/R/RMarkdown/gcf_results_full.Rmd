@@ -262,6 +262,21 @@ richness_tool |>
   theme(legend.position = "none")
 ```
 
+The tool-stratified pattern reveals that the signal of higher BGC richness in 
+cancer genomes is not uniform across prediction methods. For antiSMASH, the 
+distributions for Cancer and Non-cancer samples are virtually identical (W = 
+33898.5, p_adj = 0.387, ns)—an expected outcome, given that this tool typically 
+detects only 1–2 BGCs per genome (predominantly the universal terpene-precursor 
+cluster), leaving little room for inter-group variation. In contrast, deepBGC 
+shows a robust and highly significant difference (W = 37563.0, p_adj = 2.61e-05, 
+***), with cancer genomes exhibiting higher median values and greater dispersion 
+in the number of BGCs per genome. This indicates that the overall signal of 
+increased richness in cancer is largely driven by deepBGC and does not represent 
+a consistent, generalized trend across all mining tools. GECCO could not be 
+evaluated due to the extremely low frequency of predictions in this dataset. 
+This result is methodologically significant and it underscores the need for 
+caution when interpreting this finding as a biological pattern.
+
 ````{r bgc-richness-by-tool-tests, cache=TRUE}
 tools <- unique(gcf_meta$Prediction_tool)
 
