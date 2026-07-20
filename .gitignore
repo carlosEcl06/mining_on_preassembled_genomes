@@ -9,4 +9,4 @@ analysis/funcscan/results/
 analysis/funcscan/pipeline/
 
 analysis/R/RMarkdown/render/
-analysis/R/RMarkdown/gcf_results_cache/
+analysis/R/RMarkdown/*cache/

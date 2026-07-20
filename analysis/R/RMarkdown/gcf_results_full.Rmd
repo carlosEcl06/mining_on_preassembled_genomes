@@ -1,0 +1,758 @@
+---
+title: "GCF Clustering Results — Full Cohort Statistical Analysis"
+subtitle: "Exploratory analysis of biosynthetic gene cluster families in *H. pylori*"
+author: "LIMA, Carlos; SILVA JUNIOR, Wilson"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    theme: flatly
+    highlight: tango
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo      = FALSE,
+  warning   = FALSE,
+  message   = FALSE,
+  fig.align = "center",
+  fig.width = 8,
+  fig.height = 5
+)
+
+library(tidyverse)
+library(kableExtra)
+
+# --- paths (relative to analysis/R/RMarkdown) ---
+RESULTS_DIR <- file.path("..", "..", "scripts", "results")
+METADATA    <- file.path("..", "..", "..", "rawdata", "metadata", "gbk_hp_genomes.tsv")
+COMBGC      <- file.path("..", "copied_from_funcscan_results", "combgc_complete_summary.tsv")
+
+# check required files exist
+required_files <- c(
+  file.path(RESULTS_DIR, "gcf_assignments.tsv"),
+  file.path(RESULTS_DIR, "bgc_domain_arrays.tsv"),
+  COMBGC,
+  METADATA
+)
+missing_files <- required_files[!file.exists(required_files)]
+if (length(missing_files) > 0) {
+  stop(sprintf("Required data file(s) not found: %s", paste(missing_files, collapse = ", ")))
+}
+
+# --- load data ---
+gcf     <- read_tsv(file.path(RESULTS_DIR, "gcf_assignments.tsv"),  show_col_types = FALSE)
+domains <- read_tsv(file.path(RESULTS_DIR, "bgc_domain_arrays.tsv"), show_col_types = FALSE)
+combgc  <- read_tsv(COMBGC, show_col_types = FALSE)
+meta    <- read_tsv(METADATA, show_col_types = FALSE) |>
+  rename(sample_id = Genome_ID) |>
+  mutate(Phenotype = str_trim(Phenotype),
+         group     = if_else(Phenotype == "Gastric cancer", "Cancer", "Non-cancer"))
+
+# --- join GCF assignments with metadata ---
+gcf_meta <- gcf |>
+  left_join(meta, by = "sample_id")
+
+# --- convenience flags ---
+is_singleton <- gcf_meta$gcf_id == "singleton"
+
+# --- harmonised product class ---
+harmonise_product <- function(x) {
+  case_when(
+    str_detect(x, regex("terpene", ignore_case = TRUE)) ~ "Terpene",
+    str_detect(x, regex("polyketide", ignore_case = TRUE)) ~ "Polyketide",
+    str_detect(x, regex("NRP|NRPS|nrp", ignore_case = FALSE)) ~ "NRP",
+    str_detect(x, regex("RiPP|ripp", ignore_case = TRUE)) ~ "RiPP",
+    str_detect(x, regex("saccharide", ignore_case = TRUE)) ~ "Saccharide",
+    str_detect(x, regex("arylpolyene", ignore_case = TRUE)) ~ "Arylpolyene",
+    str_detect(x, regex("azole", ignore_case = TRUE)) ~ "Azole-RiPP",
+    x == "" | is.na(x) ~ "Unclassified",
+    TRUE ~ "Other"
+  )
+}
+
+gcf_meta <- gcf_meta |>
+  mutate(product_harmonised = harmonise_product(Product_class))
+```
+
+# Scope of this document
+
+This document supersedes the statistical-testing sections of `gcf_results.Rmd`
+without replacing it. The original document selected the 20 GCFs with the
+**largest prevalence difference** between Cancer and Non-cancer genomes and
+then tested those same 20 GCFs for significance. That procedure introduces a
+selection bias: prevalence differences are noisiest for rare, small-sample
+GCFs, so ranking by the observed difference and then testing preferentially
+surfaces GCFs whose apparent effect is inflated by sampling variation
+("winner's curse"). Multiple-testing correction applied only to that
+pre-selected subset is therefore not a valid correction for the number of
+GCFs actually considered during discovery.
+
+Here, Fisher's exact test, the Cochran–Mantel–Haenszel (CMH) test, and the
+multivariable logistic regression are all run over **every GCF that meets a
+minimum-prevalence criterion** (≥ 3 genomes total, decided *a priori* and 
+independent of any observed effect size), and Benjamini–Hochberg correction 
+is applied across that full qualifying set. The "top 20 by prevalence 
+difference" view is retained purely as a **descriptive** visualization — 
+it is explicitly labelled as such and is not used to select which GCFs are 
+tested.
+
+# Overview
+
+```{r overview-table}
+n_raw <- nrow(combgc)
+
+tibble(
+  Metric = c(
+    "Total BGCs predicted (pre-filter)",
+    "Total BGCs (post-filter)",
+    "BGCs assigned to a GCF",
+    "Singletons",
+    "Total GCFs",
+    "Largest GCF (BGCs)",
+    "Median GCF size",
+    "Genomes with metadata"
+  ),
+  Value = c(
+    n_raw,
+    nrow(gcf_meta),
+    sum(!is_singleton),
+    sum(is_singleton),
+    n_distinct(gcf_meta$gcf_id[!is_singleton]),
+    gcf_meta |> filter(!is_singleton) |> count(gcf_id) |> pull(n) |> max(),
+    gcf_meta |> filter(!is_singleton) |> count(gcf_id) |> pull(n) |> median(),
+    sum(!is.na(gcf_meta$Phenotype))
+  )
+) |>
+  knitr::kable() |>
+  kable_styling(full_width = FALSE)
+```
+
+# BGC inventory
+
+## Predictions per tool
+
+```{r tool-barplot}
+gcf_meta |>
+  count(Prediction_tool, gcf_id) |>
+  mutate(assigned = if_else(gcf_id == "singleton", "Singleton", "In GCF")) |>
+  count(Prediction_tool, assigned) |>
+  ggplot(aes(x = Prediction_tool, y = n, fill = assigned)) +
+  geom_col(position = "stack") +
+  scale_fill_manual(values = c("In GCF" = "#2c7bb6", "Singleton" = "#d7191c")) +
+  labs(x = NULL, y = "BGC count", fill = NULL,
+       title = "BGC assignment by prediction tool") +
+  theme_minimal(base_size = 13)
+```
+
+## Product class distribution
+
+```{r product-class}
+gcf_meta |>
+  filter(product_harmonised != "Unclassified") |>
+  count(Prediction_tool, product_harmonised) |>
+  ggplot(aes(x = reorder(product_harmonised, n, sum),
+             y = n,
+             fill = Prediction_tool)) +
+  geom_col(position = "stack") +
+  coord_flip() +
+  labs(x = NULL, y = "BGC count", fill = "Tool",
+       title = "Product class distribution (harmonised)") +
+  theme_minimal(base_size = 13)
+```
+
+# GCF characterization
+
+## GCF size distribution
+
+```{r gcf-size-dist}
+gcf_sizes <- gcf_meta |>
+  filter(!is_singleton) |>
+  count(gcf_id, name = "size")
+
+gcf_sizes |>
+  filter(size <= 50) |>
+  ggplot(aes(x = size)) +
+  geom_histogram(binwidth = 1, fill = "#2c7bb6", color = "white") +
+  labs(x = "GCF size (BGCs)", y = "Number of GCFs",
+       title = "GCF size distribution (≤ 50 BGCs)",
+       subtitle = sprintf("Dominant Terpene-precursor GCF (n = %d) excluded for legibility",
+                          max(gcf_sizes$size))) +
+  theme_minimal(base_size = 13)
+```
+
+## Top 15 GCFs
+
+```{r top-gcfs}
+gcf_meta |>
+  filter(!is_singleton) |>
+  group_by(gcf_id) |>
+  summarise(
+    size              = n(),
+    dominant_backbone = names(sort(table(backbone_class), decreasing = TRUE))[1],
+    dominant_product  = names(sort(table(product_harmonised), decreasing = TRUE))[1],
+    dominant_tool     = names(sort(table(Prediction_tool), decreasing = TRUE))[1],
+    n_tools           = n_distinct(Prediction_tool),
+    .groups           = "drop"
+  ) |>
+  arrange(desc(size)) |>
+  slice_head(n = 15) |>
+  knitr::kable(col.names = c("GCF", "Size", "Dominant backbone",
+                              "Dominant product", "Dominant tool", "Tools")) |>
+  kable_styling(full_width = FALSE) |>
+  scroll_box(width = "100%")
+```
+
+# Clinical context
+
+## BGC richness per genome
+
+Genomes from gastric cancer patients harbour significantly more BGCs per genome
+than non-cancer genomes (Wilcoxon rank-sum test, p < 0.001), suggesting that
+oncogenic *H. pylori* lineages may carry a more diverse biosynthetic repertoire.
+
+```{r bgc-richness}
+richness <- gcf_meta |>
+  filter(!is.na(group)) |>
+  count(sample_id, group, name = "n_bgcs")
+
+wt <- wilcox.test(n_bgcs ~ group, data = richness)
+
+richness |>
+  ggplot(aes(x = group, y = n_bgcs, fill = group)) +
+  geom_boxplot(alpha = 0.7, outlier.shape = 21) +
+  geom_jitter(width = 0.15, alpha = 0.3, size = 1.2) +
+  scale_fill_manual(values = c("Cancer" = "#d7191c", "Non-cancer" = "#2c7bb6")) +
+  annotate("text", x = 1.5, y = max(richness$n_bgcs) * 0.95,
+           label = sprintf("W = %.0f\np = %.4f", wt$statistic, wt$p.value),
+           size = 4) +
+  labs(x = NULL, y = "BGCs per genome", fill = NULL,
+       title = "BGC richness by clinical group") +
+  theme_minimal(base_size = 13) +
+  theme(legend.position = "none")
+```
+
+Cancer genomes have a median of `r median(richness$n_bgcs[richness$group == "Cancer"])`
+BGCs per genome vs `r median(richness$n_bgcs[richness$group == "Non-cancer"])` for
+non-cancer genomes (W = `r wt$statistic`, p = `r format(wt$p.value, digits = 3)`).
+
+## BGC richness per genome — by prediction tool
+
+To assess whether the increased BGC richness in cancer genomes is consistent across
+prediction tools or driven by unclassified deepBGC predictions, the analysis was
+stratified by tool.
+
+```{r bgc-richness-by-tool}
+richness_tool <- gcf_meta |>
+  filter(!is.na(group)) |>
+  count(sample_id, group, Prediction_tool, name = "n_bgcs")
+
+richness_tool |>
+  ggplot(aes(x = group, y = n_bgcs, fill = group)) +
+  geom_boxplot(alpha = 0.7, outlier.shape = 21) +
+  geom_jitter(width = 0.15, alpha = 0.3, size = 1.0) +
+  scale_fill_manual(values = c("Cancer" = "#d7191c", "Non-cancer" = "#2c7bb6")) +
+  facet_wrap(~ Prediction_tool, scales = "free_y") +
+  labs(x = NULL, y = "BGCs per genome", fill = NULL,
+       title = "BGC richness by clinical group — stratified by prediction tool") +
+  theme_minimal(base_size = 12) +
+  theme(legend.position = "none")
+```
+
+````{r bgc-richness-by-tool-tests, cache=TRUE}
+tools <- unique(gcf_meta$Prediction_tool)
+
+map_dfr(tools, function(tool) {
+  sub <- richness_tool |> filter(Prediction_tool == tool)
+
+  if (n_distinct(sub$group) < 2) {
+    return(tibble(Tool = tool, W = NA_real_, p_value = NA_real_, p_adj_BH = NA_real_))
+  }
+
+  wt <- wilcox.test(n_bgcs ~ group, data = sub)
+  tibble(
+    Tool    = tool,
+    W       = wt$statistic,
+    p_value = wt$p.value,
+    p_adj_BH = NA_real_
+  )
+}) |>
+  mutate(p_adj_BH = p.adjust(p_value, method = "BH"),
+         sig = case_when(
+           p_adj_BH < 0.001 ~ "***",
+           p_adj_BH < 0.01  ~ "**",
+           p_adj_BH < 0.05  ~ "*",
+           is.na(p_adj_BH)  ~ "—",
+           TRUE             ~ "ns"
+         ),
+         p_value  = formatC(p_value,  format = "e", digits = 2),
+         p_adj_BH = formatC(p_adj_BH, format = "e", digits = 2)) |>
+  knitr::kable(col.names = c("Tool", "W", "p", "p_adj (BH)", "Sig.")) |>
+  kable_styling(full_width = FALSE)
+````
+
+## GCF richness per genome
+
+```{r gcf-richness}
+gcf_richness <- gcf_meta |>
+  filter(!is_singleton & !is.na(group)) |>
+  distinct(sample_id, gcf_id, group) |>
+  count(sample_id, group, name = "n_gcfs")
+
+wt2 <- wilcox.test(n_gcfs ~ group, data = gcf_richness)
+
+gcf_richness |>
+  ggplot(aes(x = group, y = n_gcfs, fill = group)) +
+  geom_boxplot(alpha = 0.7, outlier.shape = 21) +
+  geom_jitter(width = 0.15, alpha = 0.3, size = 1.2) +
+  scale_fill_manual(values = c("Cancer" = "#d7191c", "Non-cancer" = "#2c7bb6")) +
+  annotate("text", x = 1.5, y = max(gcf_richness$n_gcfs) * 0.95,
+           label = sprintf("W = %.0f\np = %.4f", wt2$statistic, wt2$p.value),
+           size = 4) +
+  labs(x = NULL, y = "GCFs per genome", fill = NULL,
+       title = "GCF richness by clinical group") +
+  theme_minimal(base_size = 13) +
+  theme(legend.position = "none")
+```
+
+Cancer genomes carry a median of `r median(gcf_richness$n_gcfs[gcf_richness$group == "Cancer"])`
+distinct GCFs per genome vs `r median(gcf_richness$n_gcfs[gcf_richness$group == "Non-cancer"])`
+for non-cancer (W = `r wt2$statistic`, p = `r format(wt2$p.value, digits = 3)`).
+
+## GCF prevalence: Cancer vs Non-cancer — full cohort
+
+For each non-singleton GCF with at least 3 carrier genomes in total (the
+pre-specified minimum-size filter; see Scope above), prevalence was computed
+as the fraction of genomes in each clinical group carrying at least one BGC
+assigned to that family. Significance was assessed using Fisher's exact test.
+P-values were adjusted for multiple testing using the Benjamini–Hochberg (FDR)
+procedure **across the entire qualifying set**, not a pre-selected subset.
+
+```{r gcf-prevalence-full, cache=TRUE}
+MIN_GENOMES_TOTAL <- 3
+
+n_cancer    <- sum(meta$group == "Cancer",     na.rm = TRUE)
+n_noncancer <- sum(meta$group == "Non-cancer", na.rm = TRUE)
+
+# presence/absence per genome per GCF
+presence <- gcf_meta |>
+  filter(!is_singleton & !is.na(group)) |>
+  distinct(sample_id, gcf_id, group)
+
+# a priori size filter: GCF must be carried by >= MIN_GENOMES_TOTAL genomes
+gcf_carrier_counts <- presence |>
+  count(gcf_id, name = "n_carrier_genomes")
+
+qualifying_gcfs <- gcf_carrier_counts |>
+  filter(n_carrier_genomes >= MIN_GENOMES_TOTAL) |>
+  pull(gcf_id)
+
+n_gcf_total      <- n_distinct(presence$gcf_id)
+n_gcf_qualifying <- length(qualifying_gcfs)
+
+# Fisher's exact test per GCF
+fisher_per_gcf <- function(gcf_id_val) {
+  sub <- presence |> filter(gcf_id == gcf_id_val)
+  a <- sum(sub$group == "Cancer")
+  b <- sum(sub$group == "Non-cancer")
+  c <- n_cancer    - a
+  d <- n_noncancer - b
+  mat <- matrix(c(a, b, c, d), nrow = 2)
+  ft  <- fisher.test(mat)
+  tibble(gcf_id      = gcf_id_val,
+         n_cancer    = a,
+         n_noncancer = b,
+         prev_cancer    = a / .env$n_cancer,
+         prev_noncancer = b / .env$n_noncancer,
+         odds_ratio  = ft$estimate,
+         p_value     = ft$p.value)
+}
+
+gcf_stats_full <- map_dfr(qualifying_gcfs, fisher_per_gcf) |>
+  mutate(
+    p_adj = p.adjust(p_value, method = "BH"),
+    diff  = prev_cancer - prev_noncancer,
+    sig   = case_when(
+      p_adj < 0.001 ~ "***",
+      p_adj < 0.01  ~ "**",
+      p_adj < 0.05  ~ "*",
+      TRUE          ~ "ns"
+    )
+  ) |>
+  arrange(p_adj)
+```
+
+`r n_gcf_total` non-singleton GCFs were identified in total; `r n_gcf_qualifying`
+met the ≥ `r MIN_GENOMES_TOTAL`-genome minimum-size criterion and were carried
+forward into Fisher/CMH/GLM testing (the remaining GCFs are supported by too
+few genomes for any of these tests to have meaningful power, and were excluded
+from testing *before* looking at their prevalence difference).
+
+```{r gcf-prevalence-full-summary}
+tibble(
+  Metric = c(
+    "GCFs tested (Fisher, full cohort)",
+    "GCFs with p_adj < 0.05",
+    "GCFs with p_adj < 0.10",
+    "Minimum p_adj observed"
+  ),
+  Value = c(
+    n_gcf_qualifying,
+    sum(gcf_stats_full$p_adj < 0.05),
+    sum(gcf_stats_full$p_adj < 0.10),
+    formatC(min(gcf_stats_full$p_adj), format = "e", digits = 2)
+  )
+) |>
+  knitr::kable() |>
+  kable_styling(full_width = FALSE)
+```
+
+### Descriptive view: top 20 by prevalence difference (illustrative only)
+
+The panel below reproduces the descriptive ranking used in `gcf_results.Rmd`
+for visual comparability. **It is not the basis for any significance claim**:
+the GCFs shown here are simply the 20 with the largest observed prevalence
+difference among the `r n_gcf_qualifying` GCFs that passed the a priori size
+filter. Formal inference (Fisher/CMH/GLM, with BH correction over the full
+qualifying set) is reported in the sections that follow.
+
+```{r gcf-prevalence-illustrative}
+top20_illustrative <- gcf_stats_full |>
+  arrange(desc(abs(diff))) |>
+  slice_head(n = 20)
+
+top20_illustrative |>
+  pivot_longer(cols = c(prev_cancer, prev_noncancer),
+               names_to = "group", values_to = "prevalence") |>
+  mutate(group = if_else(group == "prev_cancer", "Cancer", "Non-cancer")) |>
+  ggplot(aes(x = reorder(gcf_id, abs(diff)), y = prevalence, fill = group)) +
+  geom_col(position = "dodge") +
+  geom_text(data = top20_illustrative,
+            aes(x = gcf_id, y = pmax(prev_cancer, prev_noncancer) + 0.02,
+                label = sig),
+            inherit.aes = FALSE, size = 4) +
+  coord_flip() +
+  scale_fill_manual(values = c("Cancer" = "#d7191c", "Non-cancer" = "#2c7bb6")) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(x = NULL, y = "Prevalence", fill = NULL,
+       title = "Illustrative: top 20 GCFs by prevalence difference",
+       subtitle = "Descriptive ranking only — not used to select GCFs for testing",
+       caption = "Significance: *** p_adj < 0.001 | ** p_adj < 0.01 | * p_adj < 0.05 | ns\n(p_adj computed over the full qualifying set of GCFs, not just those shown here)") +
+  theme_minimal(base_size = 12)
+```
+
+### Contingency table — top 20 by prevalence difference (illustrative)
+
+```{r gcf-contingency-table-full}
+contingency_table_full <- top20_illustrative |>
+  dplyr::mutate(
+    cancer_absent    = .env$n_cancer    - .data$n_cancer,
+    noncancer_absent = .env$n_noncancer - .data$n_noncancer
+  ) |>
+  dplyr::select(gcf_id, n_cancer, cancer_absent, n_noncancer, noncancer_absent)
+
+contingency_table_full |>
+  knitr::kable(
+    col.names = c("GCF", "Cancer (present)", "Cancer (absent)",
+                  "Non-cancer (present)", "Non-cancer (absent)"),
+    align = "lcccc"
+  ) |>
+  kable_styling(full_width = FALSE, font_size = 11) |>
+  scroll_box(width = "100%")
+```
+
+### Full-cohort Fisher results — top 20 by adjusted p-value
+
+This is the analytically relevant ranking: the qualifying GCFs sorted by
+Fisher p_adj (BH, corrected across all `r n_gcf_qualifying` qualifying GCFs).
+
+```{r gcf-fisher-ranked-full}
+domains_gcf <- domains |>
+  mutate(bgc_id = paste0(sample_id, "__", contig_id)) |>
+  left_join(gcf |> select(bgc_id, gcf_id), by = "bgc_id")
+
+top_domains_all <- domains_gcf |>
+  filter(gcf_id %in% gcf_stats_full$gcf_id) |>
+  separate_rows(domain_array, sep = "\\|") |>
+  filter(domain_array != "") |>
+  count(gcf_id, domain_array, sort = TRUE) |>
+  group_by(gcf_id) |>
+  slice_max(n, n = 3) |>
+  summarise(top_domains = paste(domain_array, collapse = "; "), .groups = "drop")
+
+gcf_char_all <- gcf_meta |>
+  filter(gcf_id %in% gcf_stats_full$gcf_id) |>
+  group_by(gcf_id) |>
+  summarise(
+    size     = n(),
+    backbone = names(sort(table(backbone_class),     decreasing = TRUE))[1],
+    product  = names(sort(table(product_harmonised), decreasing = TRUE))[1],
+    .groups  = "drop"
+  )
+
+gcf_stats_full |>
+  slice_head(n = 20) |>
+  select(gcf_id, n_cancer, n_noncancer, prev_cancer, prev_noncancer,
+         odds_ratio, p_value, p_adj, sig) |>
+  left_join(gcf_char_all,    by = "gcf_id") |>
+  left_join(top_domains_all, by = "gcf_id") |>
+  mutate(
+    prev_cancer    = scales::percent(prev_cancer,    accuracy = 0.1),
+    prev_noncancer = scales::percent(prev_noncancer, accuracy = 0.1),
+    odds_ratio     = round(odds_ratio, 2),
+    p_value        = formatC(p_value,  format = "e", digits = 2),
+    p_adj          = formatC(p_adj,    format = "e", digits = 2)
+  ) |>
+  knitr::kable(
+    col.names = c("GCF", "n Cancer", "n Non-cancer",
+                  "Prev. Cancer", "Prev. Non-cancer",
+                  "OR", "p", "p_adj (BH)", "Sig.",
+                  "Size", "Backbone", "Product", "Top domains")
+  ) |>
+  kable_styling(font_size = 11) |>
+  scroll_box(width = "100%")
+```
+
+## Adjusting for potential confounders — full cohort
+
+As in the prevalence analysis above, adjustment analyses (CMH and multivariable
+logistic regression) were run over **all qualifying GCFs** (≥ 3 carrier
+genomes), and Benjamini–Hochberg correction was applied across that full set.
+
+```{r gcf_logistic_full, cache=TRUE}
+# ---------------------------------------------------------------------------
+# Covariates: continent, age, total BGC richness per genome (confounder control)
+# ---------------------------------------------------------------------------
+covars <- meta |>
+  dplyr::select(sample_id, Continent, Age) |>
+  dplyr::mutate(Age = as.numeric(Age))
+
+group_lookup <- meta |>
+  dplyr::select(sample_id, group)
+
+richness_per_genome <- gcf_meta |>
+  dplyr::count(sample_id, name = "n_bgcs_total")
+
+presence_wide <- presence |>
+  dplyr::left_join(covars, by = "sample_id") |>
+  dplyr::left_join(richness_per_genome, by = "sample_id") |>
+  dplyr::filter(!is.na(group), !is.na(Continent))
+
+all_genomes <- group_lookup |>
+  dplyr::left_join(covars, by = "sample_id") |>
+  dplyr::left_join(richness_per_genome, by = "sample_id") |>
+  dplyr::filter(!is.na(group), !is.na(Continent))
+
+# ---------------------------------------------------------------------------
+# 1. Cochran-Mantel-Haenszel, stratified by continent
+# ---------------------------------------------------------------------------
+cmh_per_gcf <- function(gcf_id_val) {
+  carriers <- presence_wide |> dplyr::filter(gcf_id == gcf_id_val) |> dplyr::pull(sample_id)
+
+  tab_df <- all_genomes |>
+    dplyr::mutate(carrier = sample_id %in% carriers) |>
+    dplyr::count(Continent, group, carrier)
+
+  strata <- unique(tab_df$Continent)
+  arr_list <- list()
+  for (s in strata) {
+    sub <- tab_df |> dplyr::filter(Continent == s)
+    m <- matrix(0, nrow = 2, ncol = 2,
+                dimnames = list(carrier = c("TRUE", "FALSE"),
+                                 group   = c("Cancer", "Non-cancer")))
+    for (i in seq_len(nrow(sub))) {
+      m[as.character(sub$carrier[i]), sub$group[i]] <- sub$n[i]
+    }
+    if (all(rowSums(m) > 0) && all(colSums(m) > 0)) {
+      arr_list[[s]] <- m
+    }
+  }
+
+  if (length(arr_list) < 1) {
+    return(tibble(gcf_id = gcf_id_val, cmh_p = NA_real_, cmh_statistic = NA_real_))
+  }
+
+  arr <- array(unlist(arr_list), dim = c(2, 2, length(arr_list)))
+  res <- tryCatch(mantelhaen.test(arr, correct = TRUE), error = function(e) NULL)
+
+  if (is.null(res)) {
+    return(tibble(gcf_id = gcf_id_val, cmh_p = NA_real_, cmh_statistic = NA_real_))
+  }
+
+  tibble(gcf_id = gcf_id_val,
+         cmh_p         = res$p.value,
+         cmh_statistic = unname(res$statistic))
+}
+
+cmh_results_full <- purrr::map_dfr(gcf_stats_full$gcf_id, cmh_per_gcf)
+
+# ---------------------------------------------------------------------------
+# 2. Logistic regression: GCF_presence ~ phenotype + continent + age + richness
+# ---------------------------------------------------------------------------
+glm_per_gcf <- function(gcf_id_val) {
+  carriers <- presence_wide |> dplyr::filter(gcf_id == gcf_id_val) |> dplyr::pull(sample_id)
+
+  dat <- all_genomes |>
+    dplyr::mutate(
+      carrier = as.integer(sample_id %in% carriers),
+      group   = factor(group, levels = c("Non-cancer", "Cancer")),
+      Continent = factor(Continent)
+    ) |>
+    dplyr::filter(!is.na(Age))
+
+  if (dplyr::n_distinct(dat$carrier) < 2 || nrow(dat) < 20) {
+    return(tibble(gcf_id = gcf_id_val, glm_or = NA_real_,
+                   glm_p = NA_real_, glm_ci_low = NA_real_, glm_ci_high = NA_real_))
+  }
+
+  fit <- tryCatch(
+    glm(carrier ~ group + Continent + Age + n_bgcs_total,
+        data = dat, family = binomial()),
+    error = function(e) NULL,
+    warning = function(w) suppressWarnings(
+      glm(carrier ~ group + Continent + Age + n_bgcs_total,
+          data = dat, family = binomial())
+    )
+  )
+
+  if (is.null(fit) || !"groupCancer" %in% names(coef(fit))) {
+    return(tibble(gcf_id = gcf_id_val, glm_or = NA_real_,
+                   glm_p = NA_real_, glm_ci_low = NA_real_, glm_ci_high = NA_real_))
+  }
+
+  est <- summary(fit)$coefficients["groupCancer", ]
+  ci  <- tryCatch(confint.default(fit)["groupCancer", ],
+                   error = function(e) c(NA_real_, NA_real_))
+
+  tibble(
+    gcf_id      = gcf_id_val,
+    glm_or      = exp(est["Estimate"]),
+    glm_p       = est["Pr(>|z|)"],
+    glm_ci_low  = exp(ci[1]),
+    glm_ci_high = exp(ci[2])
+  )
+}
+
+glm_results_full <- purrr::map_dfr(gcf_stats_full$gcf_id, glm_per_gcf)
+
+# ---------------------------------------------------------------------------
+# 3. Combined comparison table (full qualifying cohort)
+# ---------------------------------------------------------------------------
+comparison_table_full <- gcf_stats_full |>
+  dplyr::select(gcf_id, n_cancer, n_noncancer, odds_ratio,
+         fisher_p = p_value, fisher_p_adj = p_adj) |>
+  dplyr::left_join(cmh_results_full, by = "gcf_id") |>
+  dplyr::left_join(glm_results_full, by = "gcf_id") |>
+  dplyr::mutate(
+    cmh_p_adj = p.adjust(cmh_p, method = "BH"),
+    glm_p_adj = p.adjust(glm_p, method = "BH")
+  ) |>
+  dplyr::arrange(glm_p_adj)
+
+n_cmh_testable <- sum(!is.na(comparison_table_full$cmh_p))
+n_glm_testable <- sum(!is.na(comparison_table_full$glm_p))
+n_cmh_sig <- sum(comparison_table_full$cmh_p_adj < 0.05, na.rm = TRUE)
+n_glm_sig <- sum(comparison_table_full$glm_p_adj < 0.05, na.rm = TRUE)
+```
+
+```{r gcf-adjustment-summary-full}
+tibble(
+  Metric = c(
+    "GCFs entering CMH/GLM (qualifying set)",
+    "GCFs with a computable CMH statistic",
+    "GCFs with a computable GLM estimate",
+    "GCFs significant by CMH (p_adj < 0.05)",
+    "GCFs significant by GLM (p_adj < 0.05)"
+  ),
+  Value = c(
+    n_gcf_qualifying,
+    n_cmh_testable,
+    n_glm_testable,
+    n_cmh_sig,
+    n_glm_sig
+  )
+) |>
+  knitr::kable() |>
+  kable_styling(full_width = FALSE)
+```
+
+### Full comparison table — top 20 by GLM adjusted p-value
+
+```{r gcf-comparison-table-display-full}
+comparison_table_full |>
+  slice_head(n = 20) |>
+  mutate(
+    fisher_p_adj = formatC(as.numeric(fisher_p_adj), format = "e", digits = 2),
+    cmh_p_adj = formatC(cmh_p_adj, format = "e", digits = 2),
+    glm_p_adj = formatC(glm_p_adj, format = "e", digits = 2),
+    odds_ratio = round(odds_ratio, 2),
+    glm_or     = round(glm_or, 2),
+    glm_ci     = sprintf("%.2f–%.2f", glm_ci_low, glm_ci_high)
+  ) |>
+  select(gcf_id, n_cancer, n_noncancer,
+         odds_ratio, fisher_p_adj,
+         cmh_p_adj,
+         glm_or, glm_ci, glm_p_adj) |>
+  knitr::kable(
+    col.names = c("GCF", "n Cancer", "n Non-cancer",
+                  "OR (Fisher)", "p_adj (Fisher)",
+                  "p_adj (CMH, continent-stratified)",
+                  "aOR (GLM)", "95% CI (aOR)", "p_adj (GLM)")
+  ) |>
+  kable_styling(font_size = 11) |>
+  scroll_box(width = "100%")
+```
+
+Extending inference to the full set of `r n_gcf_qualifying` GCFs meeting the
+minimum-size criterion, and correcting for multiple testing across that
+complete set, `r n_cmh_sig` GCF(s) reached CMH significance (p_adj < 0.05)
+and `r n_glm_sig` GCF(s) reached significance in the multivariable logistic
+regression (p_adj < 0.05) after adjusting for continent, host age, and total
+BGC richness per genome. This confirms, on a broader and pre-specified basis,
+the conclusion already suggested by the top-20 analysis in `gcf_results.Rmd`:
+no individual GCF shows a robust, confounder-adjusted association with
+gastric cancer phenotype in this cohort once multiple testing is properly
+accounted for across the full set of candidates. The near-significant signals
+observed for individual GCFs in the illustrative top-20 view are consistent
+with sampling variability in small carrier groups rather than a reproducible
+phenotype-specific enrichment.
+
+These results do not rule out a biological association between BGC/GCF
+content and gastric cancer — they indicate that, with the current sample
+size and GCF granularity, no single GCF's presence/absence carries a
+statistically robust signal after appropriate correction. Aggregate or
+richness-based signals (e.g., total BGC/GCF richness per genome, see above)
+remain the more robust univariate findings in this dataset.
+
+## Continent distribution
+
+```{r continent}
+meta |>
+  count(Continent, group) |>
+  ggplot(aes(x = Continent, y = n, fill = group)) +
+  geom_col(position = "dodge") +
+  scale_fill_manual(values = c("Cancer" = "#d7191c", "Non-cancer" = "#2c7bb6")) +
+  labs(x = NULL, y = "Genomes", fill = NULL,
+       title = "Sample distribution by continent and clinical group") +
+  theme_minimal(base_size = 13) +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1))
+```
+
+## Age distribution
+
+```{r age}
+meta |>
+  filter(!is.na(Age)) |>
+  mutate(Age = as.numeric(Age)) |>
+  ggplot(aes(x = group, y = Age, fill = group)) +
+  geom_boxplot(alpha = 0.7, outlier.shape = 21) +
+  geom_jitter(width = 0.15, alpha = 0.3, size = 1.2) +
+  scale_fill_manual(values = c("Cancer" = "#d7191c", "Non-cancer" = "#2c7bb6")) +
+  labs(x = NULL, y = "Age (years)", fill = NULL,
+       title = "Age distribution by clinical group") +
+  theme_minimal(base_size = 13) +
+  theme(legend.position = "none")
+```
