@@ -1,71 +1,0 @@
-─────────────────────────────────────────
-[2026-05-29 11:23:11] GCF clustering pipeline starting
-[2026-05-29 11:23:11] COMBGC_INPUT : /home/carlos_ecl06/projects/mining_on_preassembled_genomes/analysis/R/copied_from_funcscan_results/combgc_complete_summary.tsv
-[2026-05-29 11:23:11] RESULTS_DIR  : /home/carlos_ecl06/projects/mining_on_preassembled_genomes/analysis/scripts/gcf_clustering/../results
-[2026-05-29 11:23:11] PYTHON       : Python 3.10.12
-─────────────────────────────────────────
-[2026-05-29 11:23:11] Step 01: extracting Pfam domain arrays ...
-[01] Reading /home/carlos_ecl06/projects/mining_on_preassembled_genomes/analysis/R/copied_from_funcscan_results/combgc_complete_summary.tsv ...
-[01] 2078 BGCs loaded.
-[01] Dropped 2 deepBGC BGCs below probability threshold (0.5).
-[01] Dropped 0 BGCs with empty PFAM_domains.
-[01] 2076 BGCs retained after filtering.
-[01] Output written to /home/carlos_ecl06/projects/mining_on_preassembled_genomes/analysis/scripts/gcf_clustering/../results/bgc_domain_arrays.tsv
-[2026-05-29 11:23:11] Step 01 done in 0s
-─────────────────────────────────────────
-[2026-05-29 11:23:11] Step 02: computing pairwise Jaccard similarities ...
-[02] Reading /home/carlos_ecl06/projects/mining_on_preassembled_genomes/analysis/scripts/gcf_clustering/../results/bgc_domain_arrays.tsv ...
-[02] 2076 BGCs loaded.
-[02] WARNING: 330 duplicate bgc_id values found. Check sample_id / contig_id combinations.
-[02] Building binary domain matrix ...
-[02] Matrix shape: (2076, 423) (2076 BGCs × 423 domains).
-[02] Computing pairwise Jaccard similarities ...
-[02] Filtering pairs with Jaccard < 0.1 ...
-[02] 382,278 / 2,153,850 pairs retained (17.7%).
-[02] Writing pairs:   0%|          | 0/4 [00:00<?, ?chunk/s][02] Writing pairs:  25%|██▌       | 1/4 [00:00<00:00,  5.41chunk/s][02] Writing pairs:  50%|█████     | 2/4 [00:00<00:00,  5.50chunk/s][02] Writing pairs:  75%|███████▌  | 3/4 [00:00<00:00,  5.27chunk/s][02] Writing pairs: 100%|██████████| 4/4 [00:00<00:00,  5.88chunk/s][02] Writing pairs: 100%|██████████| 4/4 [00:00<00:00,  5.68chunk/s]
-[02] Output written to /home/carlos_ecl06/projects/mining_on_preassembled_genomes/analysis/scripts/gcf_clustering/../results/jaccard_pairs.tsv
-[2026-05-29 11:23:14] Step 02 done in 3s
-─────────────────────────────────────────
-[2026-05-29 11:23:14] Step 03: HALTED — backbone_identity skipped (antiSMASH GBK files not local).
-[2026-05-29 11:23:14]          Similarity score will use Jaccard only: sqrt(0.2 * Jaccard).
-─────────────────────────────────────────
-[2026-05-29 11:23:14] Step 04: running DBSCAN clustering ...
-[04] Reading domain arrays from /home/carlos_ecl06/projects/mining_on_preassembled_genomes/analysis/scripts/gcf_clustering/../results/bgc_domain_arrays.tsv ...
-[04] 2076 BGCs loaded.
-[04] Reading pairs from /home/carlos_ecl06/projects/mining_on_preassembled_genomes/analysis/scripts/gcf_clustering/../results/jaccard_pairs.tsv ...
-[04] 382,278 pairs loaded.
-[04] Building sparse distance matrix ...
-[04] Filling distance matrix:   0%|          | 0/382278 [00:00<?, ?pair/s][04] Filling distance matrix:   3%|▎         | 12509/382278 [00:00<00:02, 125074.91pair/s][04] Filling distance matrix:   7%|▋         | 25017/382278 [00:00<00:02, 121747.06pair/s][04] Filling distance matrix:  10%|▉         | 38067/382278 [00:00<00:02, 125682.14pair/s][04] Filling distance matrix:  13%|█▎        | 50943/382278 [00:00<00:02, 126883.34pair/s][04] Filling distance matrix:  17%|█▋        | 63638/382278 [00:00<00:02, 124867.11pair/s][04] Filling distance matrix:  20%|█▉        | 76134/382278 [00:00<00:02, 122870.92pair/s][04] Filling distance matrix:  23%|██▎       | 88456/382278 [00:00<00:02, 122979.90pair/s][04] Filling distance matrix:  26%|██▋       | 101212/382278 [00:00<00:02, 124414.87pair/s][04] Filling distance matrix:  30%|██▉       | 113660/382278 [00:00<00:02, 124378.16pair/s][04] Filling distance matrix:  33%|███▎      | 126105/382278 [00:01<00:02, 124396.40pair/s][04] Filling distance matrix:  36%|███▋      | 138584/382278 [00:01<00:01, 124513.31pair/s][04] Filling distance matrix:  40%|███▉      | 151038/382278 [00:01<00:02, 113665.81pair/s][04] Filling distance matrix:  43%|████▎     | 162585/382278 [00:01<00:01, 112757.13pair/s][04] Filling distance matrix:  46%|████▌     | 174304/382278 [00:01<00:01, 114019.69pair/s][04] Filling distance matrix:  49%|████▊     | 185799/382278 [00:01<00:01, 101791.46pair/s][04] Filling distance matrix:  52%|█████▏    | 198158/382278 [00:01<00:01, 107660.95pair/s][04] Filling distance matrix:  55%|█████▍    | 210231/382278 [00:01<00:01, 111287.19pair/s][04] Filling distance matrix:  58%|█████▊    | 222100/382278 [00:01<00:01, 113387.47pair/s][04] Filling distance matrix:  61%|██████▏   | 234150/382278 [00:01<00:01, 115437.28pair/s][04] Filling distance matrix:  64%|██████▍   | 246380/382278 [00:02<00:01, 117439.39pair/s][04] Filling distance matrix:  68%|██████▊   | 258475/382278 [00:02<00:01, 118471.71pair/s][04] Filling distance matrix:  71%|███████   | 270398/382278 [00:02<00:00, 118693.53pair/s][04] Filling distance matrix:  74%|███████▍  | 282483/382278 [00:02<00:00, 119331.60pair/s][04] Filling distance matrix:  77%|███████▋  | 294450/382278 [00:02<00:00, 118462.96pair/s][04] Filling distance matrix:  80%|████████  | 306728/382278 [00:02<00:00, 119741.48pair/s][04] Filling distance matrix:  83%|████████▎ | 318865/382278 [00:02<00:00, 120224.23pair/s][04] Filling distance matrix:  87%|████████▋ | 330901/382278 [00:02<00:00, 116660.19pair/s][04] Filling distance matrix:  90%|████████▉ | 342598/382278 [00:02<00:00, 115442.39pair/s][04] Filling distance matrix:  93%|█████████▎| 354165/382278 [00:03<00:00, 114706.90pair/s][04] Filling distance matrix:  96%|█████████▌| 365651/382278 [00:03<00:00, 114300.27pair/s][04] Filling distance matrix:  99%|█████████▊| 377091/382278 [00:03<00:00, 113694.75pair/s][04] Filling distance matrix: 100%|██████████| 382278/382278 [00:03<00:00, 117199.13pair/s]
-[04] Running DBSCAN ...
-[04] 92 GCFs found, 558 singletons (label = -1).
-[04] Output written to /home/carlos_ecl06/projects/mining_on_preassembled_genomes/analysis/scripts/gcf_clustering/../results/gcf_assignments.tsv
-
-[04] GCF size distribution:
-        42 GCFs with   2 BGC(s)
-        12 GCFs with   3 BGC(s)
-        12 GCFs with   4 BGC(s)
-         4 GCFs with   5 BGC(s)
-         3 GCFs with   6 BGC(s)
-         2 GCFs with   7 BGC(s)
-         4 GCFs with   8 BGC(s)
-         1 GCFs with   9 BGC(s)
-         2 GCFs with  10 BGC(s)
-         2 GCFs with  11 BGC(s)
-         1 GCFs with  13 BGC(s)
-         1 GCFs with  16 BGC(s)
-         1 GCFs with  22 BGC(s)
-         1 GCFs with  25 BGC(s)
-         1 GCFs with  26 BGC(s)
-         1 GCFs with  33 BGC(s)
-         1 GCFs with  77 BGC(s)
-         1 GCFs with 1003 BGC(s)
-       558 singletons
-[2026-05-29 11:23:19] Step 04 done in 5s
-─────────────────────────────────────────
-[2026-05-29 11:23:19] Pipeline complete.
-[2026-05-29 11:23:19] Results in: /home/carlos_ecl06/projects/mining_on_preassembled_genomes/analysis/scripts/gcf_clustering/../results
-[2026-05-29 11:23:19]   bgc_domain_arrays.tsv  — filtered BGCs with domain arrays
-[2026-05-29 11:23:19]   jaccard_pairs.tsv      — sparse pairwise Jaccard similarities
-[2026-05-29 11:23:19]   gcf_assignments.tsv    — GCF assignments (main output)
-[2026-05-29 11:23:19]   run_clustering.log     — this log
-─────────────────────────────────────────
