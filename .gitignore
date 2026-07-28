@@ -12,4 +12,8 @@ analysis/funcscan/pipeline/
 analysis/R/RMarkdown/render/
 analysis/R/RMarkdown/*cache/
 
+<<<<<<< HEAD
 analysis/scripts/results/
+=======
+analysis/scripts/results/
+>>>>>>> bfd19c91fc289b3c43071f96776dabe1d37dc480
