@@ -11,3 +11,5 @@ analysis/funcscan/pipeline/
 
 analysis/R/RMarkdown/render/
 analysis/R/RMarkdown/*cache/
+
+analysis/scripts/results/
