@@ -5,8 +5,13 @@
 Computes the final similarity score from jaccard_pairs.tsv, builds a pairwise
 distance matrix, and runs DBSCAN to delineate Gene Cluster Families (GCFs).
 
-Since backbone sequence identity (03_backbone_identity.py) was not executed,
-the similarity score is computed as:
+When --identity is provided (backbone_identity.tsv from 03_backbone_identity.py),
+pairs with a computed sequence_identity use the full Robey et al. (2021) score:
+
+    Similarity Score = sqrt(0.8 * sequence_identity + 0.2 * Jaccard)
+
+Pairs without a computed sequence_identity (or when --identity is omitted
+entirely) fall back to:
 
     Similarity Score = sqrt(0.2 * Jaccard)
 
@@ -24,6 +29,7 @@ Usage:
     python 04_dbscan.py \
         --domains ../results/bgc_domain_arrays.tsv \
         --pairs   ../results/jaccard_pairs.tsv \
+        --identity ../results/backbone_identity.tsv \
         --output  ../results/gcf_assignments.tsv
 """
 
@@ -37,8 +43,10 @@ from sklearn.cluster import DBSCAN
 from tqdm import tqdm
 
 # epsilon = 0.56 corresponds to grouping BGCs with identical Pfam domain content
-# (Jaccard = 1.0, distance = 1 - sqrt(0.2) ≈ 0.5528). Pairs with any domain
-# difference fall above this threshold and are treated as singletons.
+# under the Jaccard-only fallback (Jaccard = 1.0, distance = 1 - sqrt(0.2) ≈ 0.5528).
+# Under the full score (identity=1.0, Jaccard=1.0), distance = 1 - sqrt(1.0) = 0.0,
+# so 0.56 remains a valid (more permissive, never more restrictive) upper bound
+# when --identity is used.
 DBSCAN_EPSILON = 0.56
 DBSCAN_MIN_SAMPLES = 2
 
@@ -53,16 +61,24 @@ def parse_args():
                         help=f"DBSCAN epsilon in distance space (default: {DBSCAN_EPSILON})")
     parser.add_argument("--min-samples",  type=int,   default=DBSCAN_MIN_SAMPLES,
                         help=f"DBSCAN min_samples (default: {DBSCAN_MIN_SAMPLES})")
+    parser.add_argument("--identity", default=None,
+                        help="Path to backbone_identity.tsv from 03_backbone_identity.py "
+                             "(optional). When provided, pairs with a computed "
+                             "sequence_identity use the full Robey et al. score "
+                             "sqrt(0.8*identity + 0.2*Jaccard); pairs without one "
+                             "fall back to sqrt(0.2*Jaccard), matching "
+                             "experimental_design.Rmd.")
     return parser.parse_args()
 
 
-def similarity_score(jaccard: np.ndarray) -> np.ndarray:
-    """
-    Robey et al. (2021) similarity score with sequence_identity = 0:
-        Similarity = sqrt(0.2 * Jaccard)
-    Returns distance = 1 - Similarity.
-    """
-    return 1.0 - np.sqrt(0.2 * jaccard)
+def similarity_score_jaccard_only(jaccard: np.ndarray) -> np.ndarray:
+    """Fallback for BGCs without identifiable backbone domains: sqrt(0.2 * Jaccard)."""
+    return np.sqrt(0.2 * jaccard)
+
+
+def similarity_score_full(jaccard: np.ndarray, identity: np.ndarray) -> np.ndarray:
+    """Robey et al. (2021) full score: sqrt(0.8 * identity + 0.2 * Jaccard)."""
+    return np.sqrt(0.8 * identity + 0.2 * jaccard)
 
 
 def main():
@@ -77,12 +93,32 @@ def main():
     n = len(bgc_ids)
     print(f"[04] {n} BGCs loaded.", flush=True)
 
-    # --- load pairs and compute distance matrix ---
+    # --- load pairs ---
     print(f"[04] Reading pairs from {args.pairs} ...", flush=True)
     pairs = pd.read_csv(args.pairs, sep="\t",
                         dtype={"bgc_i": str, "bgc_j": str, "jaccard": float})
     print(f"[04] {len(pairs):,} pairs loaded.", flush=True)
 
+    # --- merge backbone sequence identity, if provided ---
+    if args.identity:
+        print(f"[04] Reading backbone identities from {args.identity} ...", flush=True)
+        identity_df = pd.read_csv(
+            args.identity, sep="\t",
+            dtype={"bgc_i": str, "bgc_j": str, "sequence_identity": float},
+        )
+        pairs = pairs.merge(
+            identity_df[["bgc_i", "bgc_j", "sequence_identity"]],
+            on=["bgc_i", "bgc_j"], how="left",
+        )
+        n_with_identity = pairs["sequence_identity"].notna().sum()
+        print(f"[04] {n_with_identity:,} / {len(pairs):,} pairs have a computed "
+              f"sequence_identity; the rest fall back to Jaccard-only.", flush=True)
+    else:
+        pairs["sequence_identity"] = np.nan
+        print("[04] No --identity provided; using Jaccard-only for all pairs "
+              "(sqrt(0.2 * Jaccard)).", flush=True)
+
+    # --- build distance matrix ---
     print("[04] Building sparse distance matrix ...", flush=True)
     # Use lil_matrix for efficient incremental construction, then convert to csr
     # Pairs not in the table have distance = 1.0 (Jaccard = 0, below threshold)
@@ -102,7 +138,13 @@ def main():
         if i is None or j is None:
             skipped += 1
             continue
-        d = float(similarity_score(np.array([row.jaccard]))[0])
+        if pd.notna(row.sequence_identity):
+            sim = similarity_score_full(
+                np.array([row.jaccard]), np.array([row.sequence_identity])
+            )[0]
+        else:
+            sim = similarity_score_jaccard_only(np.array([row.jaccard]))[0]
+        d = float(1.0 - sim)
         dist_sparse[i, j] = d
         dist_sparse[j, i] = d
 

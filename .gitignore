@@ -1,6 +1,7 @@
 rawdata/fastas/
 rawdata/md5sum.txt
 rawdata/README.md
+rawdata/pfam/
 
 *.nextflow*
 
