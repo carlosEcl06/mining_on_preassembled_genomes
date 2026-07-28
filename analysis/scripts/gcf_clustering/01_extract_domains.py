@@ -8,6 +8,15 @@ Applies pre-clustering filters:
   - BGCs with empty PFAM_domains are excluded
 Outputs a TSV with one BGC per row, ready for pairwise Jaccard computation.
 
+bgc_id convention: sample_id + contig_id ALONE is not unique — a single contig
+can carry more than one antiSMASH region (region001, region002, ...) or be
+called independently by more than one prediction tool, producing multiple
+rows with the same (sample_id, contig_id) pair. BGC_start (the genomic
+coordinate where the region/cluster begins) disambiguates these cases, so
+bgc_id is built here as sample_id__contig_id__BGC_start and written out as
+its own column — every downstream script (00, 02, 03, 04) should read this
+column directly rather than re-deriving bgc_id from sample_id/contig_id alone.
+
 Usage:
     python 01_extract_domains.py \
         --input  ../../R/copied_from_funcscan_results/combgc_complete_summary.tsv \
@@ -82,6 +91,17 @@ def classify_backbone(domains: list[str]) -> str:
     return "|".join(classes) if classes else "Unknown"
 
 
+def build_bgc_id(df: pd.DataFrame) -> pd.Series:
+    """
+    Canonical, unique BGC identifier: sample_id__contig_id__BGC_start.
+    BGC_start disambiguates multiple regions/calls on the same contig
+    (see module docstring). Falls back to sample_id__contig_id__NA if
+    BGC_start is missing, with a warning left to the caller to surface.
+    """
+    start = df["BGC_start"].fillna("NA").astype(str)
+    return df["sample_id"] + "__" + df["contig_id"] + "__" + start
+
+
 def main():
     args = parse_args()
 
@@ -114,13 +134,24 @@ def main():
         lambda x: classify_backbone(x.split("|") if x else [])
     )
 
+    # --- canonical bgc_id (see module docstring: sample_id__contig_id is NOT unique) ---
+    df["bgc_id"] = build_bgc_id(df)
+    n_dup = df["bgc_id"].duplicated().sum()
+    if n_dup:
+        print(f"[01] WARNING: {n_dup} duplicate bgc_id values remain even with "
+              f"BGC_start included. These are likely exact-duplicate rows in "
+              f"the comBGC summary (identical sample_id/contig_id/BGC_start) — "
+              f"inspect manually before proceeding.", flush=True)
+    else:
+        print("[01] bgc_id is unique across all retained BGCs.", flush=True)
+
     # --- output ---
     cols_out = [
-        "sample_id", "contig_id", "Prediction_tool", "Product_class",
+        "bgc_id", "sample_id", "contig_id", "Prediction_tool", "Product_class",
         "BGC_probability", "BGC_complete", "BGC_start", "BGC_end",
         "BGC_length", "CDS_count", "domain_array", "backbone_class",
     ]
-    cols_out = [c for c in cols_out if c in df.columns.tolist() + ["domain_array", "backbone_class"]]
+    cols_out = [c for c in cols_out if c in df.columns.tolist() + ["bgc_id", "domain_array", "backbone_class"]]
 
     pathlib.Path(args.output).parent.mkdir(parents=True, exist_ok=True)
     df[cols_out].to_csv(args.output, sep="\t", index=False)

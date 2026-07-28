@@ -6,6 +6,10 @@ Computes pairwise Jaccard similarity between all BGC domain arrays.
 BGC pairs with Jaccard similarity below MIN_JACCARD are excluded (set to 0).
 Outputs a sparse pairwise TSV (bgc_i, bgc_j, jaccard) for use in 03 and 04.
 
+bgc_id is read directly from the bgc_id column written by 01_extract_domains.py
+(sample_id__contig_id__BGC_start) — it is NOT re-derived from sample_id/contig_id
+here, since that pair alone is not unique (see 01's module docstring).
+
 Usage:
     python 02_jaccard_matrix.py \
         --input  ../results/bgc_domain_arrays.tsv \
@@ -33,11 +37,6 @@ def parse_args():
     parser.add_argument("--min-jaccard", type=float, default=MIN_JACCARD,
                         help=f"Minimum Jaccard similarity threshold (default: {MIN_JACCARD})")
     return parser.parse_args()
-
-
-def build_bgc_id(row: pd.Series) -> str:
-    """Construct a unique BGC identifier from sample_id and contig_id."""
-    return f"{row['sample_id']}__{row['contig_id']}"
 
 
 def domain_array_to_binary(domain_arrays: pd.Series) -> np.ndarray:
@@ -71,12 +70,17 @@ def main():
     n = len(df)
     print(f"[02] {n} BGCs loaded.", flush=True)
 
-    # --- unique BGC identifiers ---
-    df["bgc_id"] = df.apply(build_bgc_id, axis=1)
+    if "bgc_id" not in df.columns:
+        raise SystemExit(
+            "[02] ERROR: no 'bgc_id' column in input. Re-run 01_extract_domains.py "
+            "with the current version, which writes this column directly."
+        )
+
     if df["bgc_id"].duplicated().any():
         n_dup = df["bgc_id"].duplicated().sum()
-        print(f"[02] WARNING: {n_dup} duplicate bgc_id values found. "
-              "Check sample_id / contig_id combinations.", flush=True)
+        print(f"[02] WARNING: {n_dup} duplicate bgc_id values found even after "
+              "including BGC_start. Check for exact-duplicate rows upstream.",
+              flush=True)
 
     # --- binary domain matrix ---
     print("[02] Building binary domain matrix ...", flush=True)

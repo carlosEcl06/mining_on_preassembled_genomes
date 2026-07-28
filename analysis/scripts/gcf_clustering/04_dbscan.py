@@ -87,7 +87,11 @@ def main():
     # --- load BGC metadata ---
     print(f"[04] Reading domain arrays from {args.domains} ...", flush=True)
     df = pd.read_csv(args.domains, sep="\t", dtype=str)
-    df["bgc_id"] = df["sample_id"] + "__" + df["contig_id"]
+    if "bgc_id" not in df.columns:
+        raise SystemExit(
+            "[04] ERROR: no 'bgc_id' column in --domains. Re-run 01_extract_domains.py "
+            "with the current version, which writes this column directly."
+        )
     bgc_ids  = df["bgc_id"].tolist()
     bgc_index = {bid: i for i, bid in enumerate(bgc_ids)}
     n = len(bgc_ids)

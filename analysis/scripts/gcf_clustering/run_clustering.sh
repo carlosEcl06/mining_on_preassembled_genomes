@@ -26,14 +26,15 @@ set -euo pipefail
 # ---------------------------------------------------------------------------
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ANALYSIS_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+REPO_ROOT="$(cd "${ANALYSIS_DIR}/.." && pwd)"
 
 COMBGC_INPUT="${COMBGC_INPUT:-${ANALYSIS_DIR}/R/copied_from_funcscan_results/combgc_complete_summary.tsv}"
 RESULTS_DIR="${RESULTS_DIR:-${SCRIPT_DIR}/../results}"
 PYTHON="${PYTHON:-python3}"
 
 ANTISMASH_DIR="${ANTISMASH_DIR:-${ANALYSIS_DIR}/funcscan/results/bgc/antismash}"
-FASTA_DIR="${FASTA_DIR:-${ANALYSIS_DIR}/rawdata/fasta/proteins}"
-PFAM_HMM="${PFAM_HMM:-${ANALYSIS_DIR}/rawdata/pfam/Pfam-A.hmm}"
+FASTA_DIR="${FASTA_DIR:-${REPO_ROOT}/rawdata/fastas/proteins}"
+PFAM_HMM="${PFAM_HMM:-${REPO_ROOT}/rawdata/pfam/Pfam-A.hmm}"
 BACKBONE_IDENTITY="${RESULTS_DIR}/backbone_identity.tsv"
 
 DOMAIN_ARRAYS="${RESULTS_DIR}/bgc_domain_arrays.tsv"

@@ -15,7 +15,7 @@ Only pairs present in jaccard_pairs.tsv are processed. BGC pairs without any
 backbone domain in common are assigned sequence_identity = 0.0.
 
 Requirements:
-    - HMMER (hmmalign) must be in PATH
+    - HMMER (hmmalign, hmmfetch, hmmscan) must be in PATH
     - Pfam HMM database (Pfam-A.hmm) must be available (see --pfam-hmm)
     - Input FASTA files per BGC (protein sequences) must be available (see --fasta-dir)
 
@@ -24,7 +24,7 @@ Usage:
         --domains   ../results/bgc_domain_arrays.tsv \
         --pairs     ../results/jaccard_pairs.tsv \
         --fasta-dir ../../rawdata/fasta/proteins \
-        --pfam-hmm  ../../rawdata/Pfam-A.hmm \
+        --pfam-hmm  ../../rawdata/pfam/Pfam-A.hmm \
         --output    ../results/backbone_identity.tsv
 """
 
@@ -40,10 +40,14 @@ import pandas as pd
 from scipy.optimize import linear_sum_assignment
 
 
-# Backbone domains to use for hmmalign, per class.
-# Only domains present in BACKBONE_MAP in 01_extract_domains.py are considered.
+# Backbone domains to use for hmmalign, per class. These MUST be real Pfam
+# accessions fetchable via `hmmfetch Pfam-A.hmm <accession>` — "PT_FPPS_like"
+# was previously included here even though it is an antiSMASH-internal marker,
+# not a Pfam accession; hmmfetch always failed for it (silently, via the
+# except/return {} in align_sequences). It remains valid as a classification
+# marker in 01_extract_domains.py's BACKBONE_MAP, just not usable here.
 BACKBONE_DOMAINS = {
-    "Terpene":   ["PT_FPPS_like", "PF02353", "PF04909", "PF03544", "PF13088"],
+    "Terpene":   ["PF02353", "PF04909", "PF03544", "PF13088"],
     "NRPS_like": ["PF00107", "PF01262", "PF02826", "PF03446", "PF08240", "PF01501"],
     "PKS":       ["PF00109", "PF02801", "PF00550"],
     "RiPP":      ["PF00398", "PF02624", "PF02463"],
@@ -85,15 +89,42 @@ def read_fasta(path: pathlib.Path) -> dict[str, str]:
     return seqs
 
 
-def extract_domain_sequences(fasta: dict[str, str],
-                              domain: str,
-                              pfam_hmm: str) -> dict[str, str]:
+# Module-level counters so we surface the first couple of HMMER failures with
+# their actual stderr, instead of silently returning {} for all 382k pairs like
+# before — that silence is exactly what hid the real cause of "0 pairs had
+# backbone domain sequences" across two previous runs.
+_HMMSCAN_FAILURES_SHOWN = 0
+_HMMFETCH_FAILURES_SHOWN = 0
+_HMMALIGN_FAILURES_SHOWN = 0
+_MAX_FAILURES_SHOWN = 3
+
+
+def run_hmmscan_domtbl(fasta: dict[str, str], pfam_hmm: str) -> list[tuple[str, str]]:
     """
-    Run hmmscan to identify which proteins in `fasta` contain `domain`,
-    then return those sequences keyed by protein ID.
+    Run hmmscan ONCE for this BGC's full protein set against the full Pfam-A.hmm
+    database, returning (bare_accession, protein_id) for every domain hit.
+
+    IMPORTANT: hmmscan is never told which domain we're looking for — it always
+    scans the query proteins against the entire Pfam-A.hmm database regardless.
+    The previous version called this once per (bgc_id, domain) combination, but
+    since the underlying hmmscan command and its output were byte-for-byte
+    identical across those calls (only the post-hoc filter differed), this
+    re-ran the same multi-second scan 4-6x per BGC for no benefit. This version
+    runs hmmscan once per bgc_id and returns all hit rows unfiltered; filtering
+    for a specific domain is then a cheap in-memory operation (see
+    get_aligned_domain_seqs) — the set of hits returned is identical to before,
+    just computed once instead of once per domain.
+
+    hmmscan --domtblout column layout (whitespace-separated):
+        [0] target name        — the PROFILE's human-readable name (e.g. "Alcohol_dh"),
+                                  NOT its Pfam accession
+        [1] target accession   — the Pfam accession, e.g. "PF00107.30" (versioned)
+        [2] tlen
+        [3] query name         — the query PROTEIN id
+        ...
     """
     if not fasta:
-        return {}
+        return []
 
     with tempfile.NamedTemporaryFile(mode="w", suffix=".faa", delete=False) as tmp_fa:
         for hdr, seq in fasta.items():
@@ -109,7 +140,7 @@ def extract_domain_sequences(fasta: dict[str, str],
              pfam_hmm, tmp_fa_path],
             capture_output=True, check=True
         )
-        hits = {}
+        hits = []
         with open(tmp_tbl_path) as fh:
             for line in fh:
                 if line.startswith("#"):
@@ -117,13 +148,19 @@ def extract_domain_sequences(fasta: dict[str, str],
                 parts = line.split()
                 if len(parts) < 4:
                     continue
-                query_domain = parts[0]   # Pfam accession
-                protein_id   = parts[3]   # query protein
-                if query_domain == domain and protein_id in fasta:
-                    hits[protein_id] = fasta[protein_id]
+                accession  = parts[1].split(".")[0]   # Pfam accession, version stripped
+                protein_id = parts[3]                  # query protein id
+                hits.append((accession, protein_id))
         return hits
-    except subprocess.CalledProcessError:
-        return {}
+    except subprocess.CalledProcessError as e:
+        global _HMMSCAN_FAILURES_SHOWN
+        if _HMMSCAN_FAILURES_SHOWN < _MAX_FAILURES_SHOWN:
+            _HMMSCAN_FAILURES_SHOWN += 1
+            print(f"[03] hmmscan FAILED (showing first {_MAX_FAILURES_SHOWN} failures only):\n"
+                  f"     cmd: hmmscan --domtblout {tmp_tbl_path} --noali -E 1e-5 "
+                  f"{pfam_hmm} {tmp_fa_path}\n"
+                  f"     stderr: {e.stderr.decode(errors='replace').strip()}", flush=True)
+        return []
     finally:
         pathlib.Path(tmp_fa_path).unlink(missing_ok=True)
         pathlib.Path(tmp_tbl_path).unlink(missing_ok=True)
@@ -172,7 +209,19 @@ def align_sequences(seqs: dict[str, str], domain: str, pfam_hmm: str) -> dict[st
             aligned[header] = "".join(buf)
         return aligned
 
-    except subprocess.CalledProcessError:
+    except subprocess.CalledProcessError as e:
+        global _HMMFETCH_FAILURES_SHOWN, _HMMALIGN_FAILURES_SHOWN
+        cmd = e.cmd[0] if e.cmd else "?"
+        counter_name = "_HMMFETCH_FAILURES_SHOWN" if cmd == "hmmfetch" else "_HMMALIGN_FAILURES_SHOWN"
+        shown = _HMMFETCH_FAILURES_SHOWN if cmd == "hmmfetch" else _HMMALIGN_FAILURES_SHOWN
+        if shown < _MAX_FAILURES_SHOWN:
+            if cmd == "hmmfetch":
+                _HMMFETCH_FAILURES_SHOWN += 1
+            else:
+                _HMMALIGN_FAILURES_SHOWN += 1
+            print(f"[03] {cmd} FAILED for domain {domain} "
+                  f"(showing first {_MAX_FAILURES_SHOWN} failures only):\n"
+                  f"     stderr: {e.stderr.decode(errors='replace').strip()}", flush=True)
         return {}
     finally:
         pathlib.Path(tmp_hmm_path).unlink(missing_ok=True)
@@ -191,6 +240,27 @@ def pairwise_identity(seq_a: str, seq_b: str) -> float:
             if a == b:
                 matches += 1
     return matches / total if total > 0 else 0.0
+
+
+def build_accession_index(pfam_hmm_path: str) -> dict[str, str]:
+    """
+    Map bare Pfam accession (no version) -> full versioned accession, by
+    scanning 'ACC' lines in the flat-text Pfam-A.hmm file.
+
+    hmmfetch requires an EXACT match on the indexed key, which is the
+    versioned accession (e.g. 'PF00109.28'). Calling hmmfetch with a bare
+    accession like 'PF00109' fails with "not found in SSI index" even
+    though hmmpress ran correctly and the domain is present — this is what
+    caused every backbone domain lookup to fail in earlier runs.
+    """
+    accession_map = {}
+    with open(pfam_hmm_path, errors="replace") as fh:
+        for line in fh:
+            if line.startswith("ACC "):
+                full = line.split()[1].strip()
+                bare = full.split(".")[0]
+                accession_map[bare] = full
+    return accession_map
 
 
 def hungarian_best_identity(seqs_i: list[str], seqs_j: list[str]) -> float:
@@ -221,10 +291,65 @@ def hungarian_best_identity(seqs_i: list[str], seqs_j: list[str]) -> float:
 def main():
     args = parse_args()
 
+    # --- fail fast: verify HMMER binaries and a pressed Pfam-A.hmm exist ---
+    for binary in ("hmmscan", "hmmfetch", "hmmalign"):
+        check = subprocess.run(["which", binary], capture_output=True)
+        if check.returncode != 0:
+            raise SystemExit(f"[03] ERROR: '{binary}' not found in PATH. "
+                              f"Activate the gcf_clustering conda env first.")
+
+    pressed_exts = (".h3f", ".h3i", ".h3m", ".h3p")
+    missing = [ext for ext in pressed_exts if not pathlib.Path(args.pfam_hmm + ext).exists()]
+    if missing:
+        raise SystemExit(
+            f"[03] ERROR: {args.pfam_hmm} is missing pressed index files "
+            f"({', '.join(missing)}). Run: hmmpress {args.pfam_hmm}"
+        )
+
+    # Build bare→versioned accession map once, since hmmfetch needs the exact
+    # versioned key (see build_accession_index docstring).
+    print(f"[03] Indexing Pfam accessions in {args.pfam_hmm} ...", flush=True)
+    accession_map = build_accession_index(args.pfam_hmm)
+    print(f"[03] Found {len(accession_map):,} Pfam accessions.", flush=True)
+
+    # Resolve BACKBONE_DOMAINS to versioned accessions; warn (once) about any
+    # that aren't present in this Pfam-A.hmm release rather than failing later.
+    resolved_backbone_domains: dict[str, list[str]] = {}
+    for cls, doms in BACKBONE_DOMAINS.items():
+        resolved = []
+        for d in doms:
+            versioned = accession_map.get(d)
+            if versioned is None:
+                print(f"[03] WARNING: accession {d} (class {cls}) not found in "
+                      f"{args.pfam_hmm}; skipping.", flush=True)
+                continue
+            resolved.append(versioned)
+        resolved_backbone_domains[cls] = resolved
+
+    # Smoke-test hmmfetch against a real, correctly versioned accession
+    smoke_domain = next(iter(resolved_backbone_domains.get("PKS", [])), None) \
+        or next((v for vs in resolved_backbone_domains.values() for v in vs), None)
+    if smoke_domain is None:
+        raise SystemExit("[03] ERROR: none of the BACKBONE_DOMAINS accessions were "
+                          f"found in {args.pfam_hmm}. Check the Pfam release in use.")
+    smoke = subprocess.run(["hmmfetch", args.pfam_hmm, smoke_domain], capture_output=True)
+    if smoke.returncode != 0:
+        raise SystemExit(
+            f"[03] ERROR: hmmfetch smoke test failed against {args.pfam_hmm} "
+            f"(accession {smoke_domain}).\n"
+            f"stderr: {smoke.stderr.decode(errors='replace').strip()}\n"
+            f"Check that Pfam-A.hmm was downloaded/pressed correctly."
+        )
+    print(f"[03] HMMER + Pfam-A.hmm smoke test passed ({smoke_domain}).", flush=True)
+
     print(f"[03] Reading domain arrays from {args.domains} ...", flush=True)
     df_domains = pd.read_csv(args.domains, sep="\t", dtype=str)
-    df_domains["bgc_id"] = df_domains["sample_id"] + "__" + df_domains["contig_id"]
-    domain_lookup  = df_domains.set_index("bgc_id")["domain_array"].to_dict()
+    if "bgc_id" not in df_domains.columns:
+        raise SystemExit(
+            "[03] ERROR: no 'bgc_id' column in --domains. Re-run 01_extract_domains.py "
+            "with the current version, which writes this column directly."
+        )
+    domain_lookup   = df_domains.set_index("bgc_id")["domain_array"].to_dict()
     backbone_lookup = df_domains.set_index("bgc_id")["backbone_class"].to_dict()
 
     print(f"[03] Reading pairs from {args.pairs} ...", flush=True)
@@ -235,9 +360,12 @@ def main():
     fasta_dir = pathlib.Path(args.fasta_dir)
     pfam_hmm  = args.pfam_hmm
 
-    # Cache FASTA files and domain sequences to avoid redundant hmmscan calls
-    fasta_cache:  dict[str, dict[str, str]] = {}
-    domain_cache: dict[tuple, dict[str, str]] = {}   # (bgc_id, domain) → aligned seqs
+    # Cache FASTA files and hmmscan hits per bgc_id (ONE hmmscan call per BGC,
+    # not per domain — see run_hmmscan_domtbl docstring), plus per-(bgc_id,
+    # domain) aligned sequences to avoid redundant hmmfetch/hmmalign calls.
+    fasta_cache:   dict[str, dict[str, str]] = {}
+    hmmscan_cache: dict[str, list[tuple[str, str]]] = {}
+    domain_cache:  dict[tuple, list[str]] = {}   # (bgc_id, domain) → aligned seqs
 
     def get_fasta(bgc_id: str) -> dict[str, str]:
         if bgc_id not in fasta_cache:
@@ -245,12 +373,21 @@ def main():
             fasta_cache[bgc_id] = read_fasta(fa_path) if fa_path.exists() else {}
         return fasta_cache[bgc_id]
 
+    def get_hmmscan_hits(bgc_id: str) -> list[tuple[str, str]]:
+        if bgc_id not in hmmscan_cache:
+            fasta = get_fasta(bgc_id)
+            hmmscan_cache[bgc_id] = run_hmmscan_domtbl(fasta, pfam_hmm)
+        return hmmscan_cache[bgc_id]
+
     def get_aligned_domain_seqs(bgc_id: str, domain: str) -> list[str]:
         key = (bgc_id, domain)
         if key not in domain_cache:
-            fasta    = get_fasta(bgc_id)
-            hit_seqs = extract_domain_sequences(fasta, domain, pfam_hmm)
-            aligned  = align_sequences(hit_seqs, domain, pfam_hmm) if hit_seqs else {}
+            fasta       = get_fasta(bgc_id)
+            domain_bare = domain.split(".")[0]
+            all_hits    = get_hmmscan_hits(bgc_id)
+            hit_seqs    = {pid: fasta[pid] for acc, pid in all_hits
+                           if acc == domain_bare and pid in fasta}
+            aligned     = align_sequences(hit_seqs, domain, pfam_hmm) if hit_seqs else {}
             domain_cache[key] = list(aligned.values())
         return domain_cache[key]
 
@@ -276,7 +413,7 @@ def main():
         # For each shared backbone class, compute mean identity across its domains
         class_identities = []
         for cls in shared_classes:
-            domains_in_class = BACKBONE_DOMAINS.get(cls, [])
+            domains_in_class = resolved_backbone_domains.get(cls, [])
             domain_identities = []
             for domain in domains_in_class:
                 seqs_i = get_aligned_domain_seqs(bgc_i, domain)
