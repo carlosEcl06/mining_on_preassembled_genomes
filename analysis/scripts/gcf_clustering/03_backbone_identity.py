@@ -46,8 +46,20 @@ from scipy.optimize import linear_sum_assignment
 # not a Pfam accession; hmmfetch always failed for it (silently, via the
 # except/return {} in align_sequences). It remains valid as a classification
 # marker in 01_extract_domains.py's BACKBONE_MAP, just not usable here.
+#
+# Terpene: verified empirically (2026-07-28) by running hmmscan directly on
+# real antiSMASH BGC FASTAs and inspecting the actual domtblout hits — the
+# previous list (PF02353, PF04909, PF03544, PF13088) never appeared in any of
+# them and was never actually verified against this dataset despite the
+# comment claiming otherwise. PF00348 (Polyprenyl synthetase, the FPPS-like
+# enzyme "PT_FPPS_like" refers to) was confirmed present in 4/4 spot-checked
+# Terpene BGCs. This is the only class that matters in practice: antiSMASH
+# BGCs in this dataset classify as either Terpene or Unknown (554 vs 20 of
+# 574) — NRPS_like/PKS/RiPP only ever occur on deepBGC/GECCO BGCs, which have
+# no antiSMASH region GBK and therefore no FASTA to align in the first place.
+# Their accessions below are left unverified since they're unreachable here.
 BACKBONE_DOMAINS = {
-    "Terpene":   ["PF02353", "PF04909", "PF03544", "PF13088"],
+    "Terpene":   ["PF00348"],
     "NRPS_like": ["PF00107", "PF01262", "PF02826", "PF03446", "PF08240", "PF01501"],
     "PKS":       ["PF00109", "PF02801", "PF00550"],
     "RiPP":      ["PF00398", "PF02624", "PF02463"],
