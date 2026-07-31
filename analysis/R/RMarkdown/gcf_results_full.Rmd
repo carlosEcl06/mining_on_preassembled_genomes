@@ -250,7 +250,7 @@ richness |>
 
 Cancer genomes have a median of `r median(richness$n_bgcs[richness$group == "Cancer"])`
 BGCs per genome vs `r median(richness$n_bgcs[richness$group == "Non-cancer"])` for
-non-cancer genomes (W = `r wt$statistic`, p = `r format(wt$p.value, digits = 3)`).
+non-cancer genomes (W = `r format(wt$statistic, big.mark = ",", scientific = FALSE)`, p = `r format(wt$p.value, digits = 3)`).
 
 ## BGC richness per genome — by prediction tool
 
@@ -348,7 +348,7 @@ gcf_richness |>
 
 Cancer genomes carry a median of `r median(gcf_richness$n_gcfs[gcf_richness$group == "Cancer"])`
 distinct GCFs per genome vs `r median(gcf_richness$n_gcfs[gcf_richness$group == "Non-cancer"])`
-for non-cancer (W = `r wt2$statistic`, p = `r format(wt2$p.value, digits = 3)`).
+for non-cancer (W = `r format(wt2$statistic, big.mark = ",", scientific = FALSE)`, p = `r format(wt2$p.value, digits = 3)`).
 
 ## GCF prevalence: Cancer vs Non-cancer — full cohort
 
@@ -499,8 +499,13 @@ This is the analytically relevant ranking: the qualifying GCFs sorted by
 Fisher p_adj (BH, corrected across all `r n_gcf_qualifying` qualifying GCFs).
 
 ```{r gcf-fisher-ranked-full}
+# NOTE: `domains` (bgc_domain_arrays.tsv) already carries the correct
+# `bgc_id` column (sample_id__contig_id__BGC_start). Reconstructing it as
+# paste0(sample_id, "__", contig_id) drops the BGC_start disambiguator and
+# never matches `gcf`'s real bgc_id whenever a contig has more than one
+# BGC on it — which silently produced "Top domains" = NA for every single
+# GCF in this table. Just join on the existing column instead.
 domains_gcf <- domains |>
-  mutate(bgc_id = paste0(sample_id, "__", contig_id)) |>
   left_join(gcf |> select(bgc_id, gcf_id), by = "bgc_id")
 
 top_domains_all <- domains_gcf |>
