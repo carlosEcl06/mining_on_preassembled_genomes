@@ -1,6 +1,6 @@
 ---
-title: "GCF Clustering Results — Full Cohort Statistical Analysis"
-subtitle: "Exploratory analysis of biosynthetic gene cluster families in *H. pylori*"
+title: "GCF Clustering Results"
+subtitle: "Consolidated exploratory and full-cohort statistical analysis of biosynthetic gene cluster families in *H. pylori*"
 author: "LIMA, Carlos; SILVA JUNIOR, Wilson"
 date: "`r Sys.Date()`"
 output:
@@ -84,12 +84,21 @@ gcf_meta <- gcf_meta |>
 
 # Scope of this document
 
-This document supersedes the statistical-testing sections of `gcf_results.Rmd`
-without replacing it. The original document selected the 20 GCFs with the
-**largest prevalence difference** between Cancer and Non-cancer genomes and
-then tested those same 20 GCFs for significance. That procedure introduces a
-selection bias: prevalence differences are noisiest for rare, small-sample
-GCFs, so ranking by the observed difference and then testing preferentially
+This document consolidates the full GCF clustering analysis in a single
+place: exploratory characterization (BGC/GCF inventory, product-class
+composition, size distribution, richness by clinical group) together with
+the statistically rigorous hypothesis-testing procedure for GCF–phenotype
+association. It replaces the earlier two-document split (`gcf_results.Rmd`
++ `gcf_results_full.Rmd`); `gcf_results.Rmd` is retained only as a pointer
+to this file.
+
+An earlier version of the statistical-testing section (now retired)
+selected the 20 GCFs with the **largest prevalence difference** between
+Cancer and Non-cancer genomes and then tested those same 20 GCFs for
+significance, including in the confounder-adjustment step (CMH,
+multivariable logistic regression). That procedure introduces a selection
+bias: prevalence differences are noisiest for rare, small-sample GCFs, so
+ranking by the observed difference and then testing preferentially
 surfaces GCFs whose apparent effect is inflated by sampling variation
 ("winner's curse"). Multiple-testing correction applied only to that
 pre-selected subset is therefore not a valid correction for the number of
@@ -97,12 +106,12 @@ GCFs actually considered during discovery.
 
 Here, Fisher's exact test, the Cochran–Mantel–Haenszel (CMH) test, and the
 multivariable logistic regression are all run over **every GCF that meets a
-minimum-prevalence criterion** (≥ 3 genomes total, decided *a priori* and 
-independent of any observed effect size), and Benjamini–Hochberg correction 
-is applied across that full qualifying set. The "top 20 by prevalence 
-difference" view is retained purely as a **descriptive** visualization — 
-it is explicitly labelled as such and is not used to select which GCFs are 
-tested.
+minimum-prevalence criterion** (≥ 3 genomes total, decided *a priori* and
+independent of any observed effect size), and Benjamini–Hochberg correction
+is applied across that full qualifying set. The "top 20 by prevalence
+difference" view is retained purely as a **descriptive** visualization —
+it is explicitly labelled as such and is not used to select which GCFs are
+tested or adjusted for confounders.
 
 # Overview
 
@@ -431,8 +440,9 @@ tibble(
 
 ### Descriptive view: top 20 by prevalence difference (illustrative only)
 
-The panel below reproduces the descriptive ranking used in `gcf_results.Rmd`
-for visual comparability. **It is not the basis for any significance claim**:
+The panel below reproduces the descriptive prevalence-difference ranking
+used in earlier reporting, kept for visual comparability.
+**It is not the basis for any significance claim**:
 the GCFs shown here are simply the 20 with the largest observed prevalence
 difference among the `r n_gcf_qualifying` GCFs that passed the a priori size
 filter. Formal inference (Fisher/CMH/GLM, with BH correction over the full
@@ -499,8 +509,17 @@ top_domains_all <- domains_gcf |>
   filter(domain_array != "") |>
   count(gcf_id, domain_array, sort = TRUE) |>
   group_by(gcf_id) |>
-  slice_max(n, n = 3) |>
+  slice_max(n, n = 5) |>
   summarise(top_domains = paste(domain_array, collapse = "; "), .groups = "drop")
+
+# mean BGC probability (deepBGC/GECCO only; antiSMASH BGCs have no
+# BGC_probability score and are excluded via !is.na() below)
+mean_prob_all <- gcf_meta |>
+  filter(gcf_id %in% gcf_stats_full$gcf_id & !is.na(BGC_probability)) |>
+  mutate(BGC_probability = as.numeric(BGC_probability)) |>
+  group_by(gcf_id) |>
+  summarise(mean_prob = round(mean(BGC_probability, na.rm = TRUE), 3),
+            .groups = "drop")
 
 gcf_char_all <- gcf_meta |>
   filter(gcf_id %in% gcf_stats_full$gcf_id) |>
@@ -517,6 +536,7 @@ gcf_stats_full |>
   select(gcf_id, n_cancer, n_noncancer, prev_cancer, prev_noncancer,
          odds_ratio, p_value, p_adj, sig) |>
   left_join(gcf_char_all,    by = "gcf_id") |>
+  left_join(mean_prob_all,   by = "gcf_id") |>
   left_join(top_domains_all, by = "gcf_id") |>
   mutate(
     prev_cancer    = scales::percent(prev_cancer,    accuracy = 0.1),
@@ -529,7 +549,7 @@ gcf_stats_full |>
     col.names = c("GCF", "n Cancer", "n Non-cancer",
                   "Prev. Cancer", "Prev. Non-cancer",
                   "OR", "p", "p_adj (BH)", "Sig.",
-                  "Size", "Backbone", "Product", "Top domains")
+                  "Size", "Backbone", "Product", "Mean prob.", "Top domains")
   ) |>
   kable_styling(font_size = 11) |>
   scroll_box(width = "100%")
@@ -730,14 +750,12 @@ minimum-size criterion, and correcting for multiple testing across that
 complete set, `r n_cmh_sig` GCF(s) reached CMH significance (p_adj < 0.05)
 and `r n_glm_sig` GCF(s) reached significance in the multivariable logistic
 regression (p_adj < 0.05) after adjusting for continent, host age, and total
-BGC richness per genome. This confirms, on a broader and pre-specified basis,
-the conclusion already suggested by the top-20 analysis in `gcf_results.Rmd`:
-no individual GCF shows a robust, confounder-adjusted association with
-gastric cancer phenotype in this cohort once multiple testing is properly
-accounted for across the full set of candidates. The near-significant signals
-observed for individual GCFs in the illustrative top-20 view are consistent
-with sampling variability in small carrier groups rather than a reproducible
-phenotype-specific enrichment.
+BGC richness per genome. No individual GCF shows a robust, confounder-adjusted
+association with gastric cancer phenotype in this cohort once multiple
+testing is properly accounted for across the full set of candidates. The
+near-significant signals observed for individual GCFs in the illustrative
+top-20 view (see above) are consistent with sampling variability in small
+carrier groups rather than a reproducible phenotype-specific enrichment.
 
 These results do not rule out a biological association between BGC/GCF
 content and gastric cancer — they indicate that, with the current sample
