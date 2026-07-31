@@ -41,28 +41,44 @@ from scipy.optimize import linear_sum_assignment
 
 
 # Backbone domains to use for hmmalign, per class. These MUST be real Pfam
-# accessions fetchable via `hmmfetch Pfam-A.hmm <accession>` — "PT_FPPS_like"
-# was previously included here even though it is an antiSMASH-internal marker,
-# not a Pfam accession; hmmfetch always failed for it (silently, via the
-# except/return {} in align_sequences). It remains valid as a classification
-# marker in 01_extract_domains.py's BACKBONE_MAP, just not usable here.
+# accessions fetchable via `hmmfetch Pfam-A.hmm <accession>` (versioned form
+# resolved automatically at runtime — see build_accession_index()).
 #
-# Terpene: verified empirically (2026-07-28) by running hmmscan directly on
-# real antiSMASH BGC FASTAs and inspecting the actual domtblout hits — the
-# previous list (PF02353, PF04909, PF03544, PF13088) never appeared in any of
-# them and was never actually verified against this dataset despite the
-# comment claiming otherwise. PF00348 (Polyprenyl synthetase, the FPPS-like
-# enzyme "PT_FPPS_like" refers to) was confirmed present in 4/4 spot-checked
-# Terpene BGCs. This is the only class that matters in practice: antiSMASH
-# BGCs in this dataset classify as either Terpene or Unknown (554 vs 20 of
-# 574) — NRPS_like/PKS/RiPP only ever occur on deepBGC/GECCO BGCs, which have
-# no antiSMASH region GBK and therefore no FASTA to align in the first place.
-# Their accessions below are left unverified since they're unreachable here.
+# Keys are now the ACTUAL Product_class strings from combgc/antiSMASH
+# (backbone_class is sourced directly from Product_class as of 2026-07-29 —
+# see 01_extract_domains.py's module docstring for why the old Pfam-matching
+# heuristic was dropped: it produced false-positive rates as high as 94%
+# ("Saccharide" BGCs mislabeled "Terpene"), because the marker accessions it
+# used were never independently verified against this dataset).
+#
+# Only antiSMASH BGCs reach this script at all (00_extract_bgc_fastas.py only
+# extracts FASTA for Prediction_tool == antiSMASH), so only antiSMASH's own
+# three Product_class values are listed below — deepBGC/GECCO Product_class
+# values (Polyketide, Saccharide, Other, RiPP, NRP, Terpene,
+# Polyketide-Terpene, Unknown) are structurally unreachable here regardless
+# of what accessions might describe them, since there's no FASTA to align.
+#
+# Provenance per entry:
+#   "Terpene-precursor": VERIFIED 2026-07-28 — ran hmmscan directly on 4
+#       different antiSMASH Terpene-precursor BGC FASTAs and confirmed
+#       PF00348 (Polyprenyl synthetase — the enzyme comBGC's own
+#       "PT_FPPS_like" marker refers to) present in all 4/4 spot-checks.
+#   "Azole-containing-RiPP": NOT YET independently verified via hmmscan.
+#       PF02624 (YcaO domain) is a well-motivated candidate — comBGC's own
+#       PFAM_domains already reports the literal name "YcaO" in 19/19 of
+#       these BGCs, and the YcaO cyclodehydratase is the textbook
+#       backbone-defining enzyme for azole-containing RiPPs — but this is
+#       inference from nomenclature, not the same direct verification done
+#       for Terpene-precursor. Recommend the same spot-check before trusting
+#       results for this class: run hmmscan on 2-3 of these BGCs' .faa files
+#       and confirm PF02624 appears.
+#   "Arylpolyene": left EMPTY deliberately. n=1 BGC in this dataset, so there
+#       can never be a within-class pair to compute identity for regardless
+#       of which accession is chosen — not worth guessing.
 BACKBONE_DOMAINS = {
-    "Terpene":   ["PF00348"],
-    "NRPS_like": ["PF00107", "PF01262", "PF02826", "PF03446", "PF08240", "PF01501"],
-    "PKS":       ["PF00109", "PF02801", "PF00550"],
-    "RiPP":      ["PF00398", "PF02624", "PF02463"],
+    "Terpene-precursor":     ["PF00348"],
+    "Azole-containing-RiPP": ["PF02624"],   # unverified — see provenance note above
+    "Arylpolyene":           [],            # n=1, no pairs possible; intentionally empty
 }
 
 
@@ -338,9 +354,10 @@ def main():
             resolved.append(versioned)
         resolved_backbone_domains[cls] = resolved
 
-    # Smoke-test hmmfetch against a real, correctly versioned accession
-    smoke_domain = next(iter(resolved_backbone_domains.get("PKS", [])), None) \
-        or next((v for vs in resolved_backbone_domains.values() for v in vs), None)
+    # Smoke-test hmmfetch against a real, correctly versioned accession —
+    # just take the first resolved accession from any class (no need to prefer
+    # a specific class now that BACKBONE_DOMAINS is keyed by Product_class).
+    smoke_domain = next((v for vs in resolved_backbone_domains.values() for v in vs), None)
     if smoke_domain is None:
         raise SystemExit("[03] ERROR: none of the BACKBONE_DOMAINS accessions were "
                           f"found in {args.pfam_hmm}. Check the Pfam release in use.")
