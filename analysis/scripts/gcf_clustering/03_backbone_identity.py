@@ -44,41 +44,69 @@ from scipy.optimize import linear_sum_assignment
 # accessions fetchable via `hmmfetch Pfam-A.hmm <accession>` (versioned form
 # resolved automatically at runtime — see build_accession_index()).
 #
-# Keys are now the ACTUAL Product_class strings from combgc/antiSMASH
+# Keys are the ACTUAL Product_class strings from combgc/antiSMASH/deepBGC
 # (backbone_class is sourced directly from Product_class as of 2026-07-29 —
 # see 01_extract_domains.py's module docstring for why the old Pfam-matching
 # heuristic was dropped: it produced false-positive rates as high as 94%
 # ("Saccharide" BGCs mislabeled "Terpene"), because the marker accessions it
 # used were never independently verified against this dataset).
 #
-# Only antiSMASH BGCs reach this script at all (00_extract_bgc_fastas.py only
-# extracts FASTA for Prediction_tool == antiSMASH), so only antiSMASH's own
-# three Product_class values are listed below — deepBGC/GECCO Product_class
-# values (Polyketide, Saccharide, Other, RiPP, NRP, Terpene,
-# Polyketide-Terpene, Unknown) are structurally unreachable here regardless
-# of what accessions might describe them, since there's no FASTA to align.
+# FASTA is available for antiSMASH (00_extract_bgc_fastas.py) and, as of
+# 2026-07-30, deepBGC (00b_extract_deepbgc_fastas.py, using deepBGC's own
+# pre-cut {sample}.bgc.gbk). GECCO (37 BGCs) still has no FASTA source and
+# remains unreachable here — see run_clustering.sh's header comment.
+#
+# deepBGC classes were resolved via discover_deepbgc_backbone_domains.py,
+# which aggregates deepBGC's own {sample}.pfam.tsv (already clean PFxxxxx
+# accessions, no NAME/ACC inconsistency) and computes a SPECIFICITY score per
+# (class, domain): own-class prevalence minus the highest prevalence that
+# domain reaches in any OTHER class. Two deepBGC classes — "RiPP" (best
+# specificity 0.31) and "Other" (best specificity 0.28) — never cleared a
+# specificity high enough to trust (every other resolved class scored
+# 0.47-0.98) and were deliberately left out, matching their entries' absence
+# below; they fall back to Jaccard-only, same as "Unknown" and "Arylpolyene".
 #
 # Provenance per entry:
-#   "Terpene-precursor": VERIFIED 2026-07-28 — ran hmmscan directly on 4
-#       different antiSMASH Terpene-precursor BGC FASTAs and confirmed
-#       PF00348 (Polyprenyl synthetase — the enzyme comBGC's own
-#       "PT_FPPS_like" marker refers to) present in all 4/4 spot-checks.
-#   "Azole-containing-RiPP": NOT YET independently verified via hmmscan.
-#       PF02624 (YcaO domain) is a well-motivated candidate — comBGC's own
-#       PFAM_domains already reports the literal name "YcaO" in 19/19 of
-#       these BGCs, and the YcaO cyclodehydratase is the textbook
-#       backbone-defining enzyme for azole-containing RiPPs — but this is
-#       inference from nomenclature, not the same direct verification done
-#       for Terpene-precursor. Recommend the same spot-check before trusting
-#       results for this class: run hmmscan on 2-3 of these BGCs' .faa files
-#       and confirm PF02624 appears.
-#   "Arylpolyene": left EMPTY deliberately. n=1 BGC in this dataset, so there
-#       can never be a within-class pair to compute identity for regardless
-#       of which accession is chosen — not worth guessing.
+#   "Terpene-precursor" (antiSMASH): VERIFIED 2026-07-28 — ran hmmscan
+#       directly on 4 different BGC FASTAs and confirmed PF00348 (Polyprenyl
+#       synthetase — the enzyme comBGC's own "PT_FPPS_like" marker refers to)
+#       present in all 4/4 spot-checks.
+#   "Azole-containing-RiPP" (antiSMASH): VERIFIED 2026-07-29 — ran hmmscan
+#       directly on 3 different BGC FASTAs; PF02624.22 (YcaO domain, matching
+#       comBGC's own "YcaO" marker name) was present and clearly hit
+#       (E < 1e-5) in all 3/3 spot-checks.
+#   "Arylpolyene" (antiSMASH): left EMPTY deliberately. n=1 BGC in this
+#       dataset, so there can never be a within-class pair to compute
+#       identity for regardless of which accession is chosen.
+#   "NRP" (deepBGC): specificity 0.783 for all 5 accessions (present in only
+#       3.7% of any other class). Not canonical NRPS C/A/T domains — the
+#       consistent presence of NAD-binding/dehydrogenase domains instead
+#       suggests an NIS (NRPS-independent siderophore) pathway in this
+#       dataset's "NRP"-labeled BGCs.
+#   "Saccharide" (deepBGC): PF13579 at specificity 0.984 (near-perfect);
+#       PF13692/PF00534/PF13439 (canonical glycosyltransferase families) at
+#       0.88.
+#   "Polyketide" (deepBGC): PF00109 (canonical ketosynthase, the most
+#       rigorous marker — only 30.6% prevalence but 0.1% background, so
+#       specificity 0.305) plus PF00106/PF13561/PF08659 (~0.47-0.48
+#       specificity, broader but still clearly class-associated reductases).
+#   "Terpene" (deepBGC): specificity 0.6-0.8. NOTE this is a DIFFERENT class
+#       from antiSMASH's "Terpene-precursor" above (n=5 vs n=554) — kept
+#       separate rather than merged, since nothing yet confirms these two
+#       differently-named classes share the same biosynthetic family.
+#   "Polyketide-Terpene" (deepBGC, n=2): PF00348 at specificity 1.0 — the
+#       same accession independently verified for antiSMASH's
+#       Terpene-precursor above. n=2 means at most one pair is possible
+#       within this class, but the accession is free to include.
 BACKBONE_DOMAINS = {
     "Terpene-precursor":     ["PF00348"],
-    "Azole-containing-RiPP": ["PF02624"],   # unverified — see provenance note above
-    "Arylpolyene":           [],            # n=1, no pairs possible; intentionally empty
+    "Azole-containing-RiPP": ["PF02624"],
+    "Arylpolyene":           [],
+    "NRP":                   ["PF00107", "PF01262", "PF02826", "PF03446", "PF08240"],
+    "Saccharide":            ["PF13579", "PF13692", "PF00534", "PF13439"],
+    "Polyketide":            ["PF00109", "PF00106", "PF13561", "PF08659"],
+    "Terpene":               ["PF04909", "PF13088", "PF03544"],
+    "Polyketide-Terpene":    ["PF00348"],
 }
 
 

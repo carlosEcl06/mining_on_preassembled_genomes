@@ -2,11 +2,18 @@
 # run_clustering.sh
 #
 # Orchestrates the GCF clustering pipeline:
-#   00_extract_bgc_fastas.py  →  per-BGC protein FASTAs (from antiSMASH GBKs)
-#   01_extract_domains.py     →  bgc_domain_arrays.tsv
-#   02_jaccard_matrix.py      →  jaccard_pairs.tsv
-#   03_backbone_identity.py   →  backbone_identity.tsv
-#   04_dbscan.py              →  gcf_assignments.tsv
+#   00_extract_bgc_fastas.py    →  per-BGC protein FASTAs (from antiSMASH GBKs)
+#   00b_extract_deepbgc_fastas.py → per-BGC protein FASTAs (from deepBGC GBKs)
+#   01_extract_domains.py       →  bgc_domain_arrays.tsv
+#   02_jaccard_matrix.py        →  jaccard_pairs.tsv
+#   03_backbone_identity.py     →  backbone_identity.tsv
+#   04_dbscan.py                →  gcf_assignments.tsv
+#
+# GECCO (37 BGCs) is not yet covered — its output has no embedded protein
+# sequence source; deferred given the small n. See discover_deepbgc_backbone_
+# domains.py (run manually, not part of this script) for empirically
+# identifying deepBGC's backbone Pfam domains before wiring them into
+# 03_backbone_identity.py's BACKBONE_DOMAINS.
 #
 # Usage (from scripts/gcf_clustering/):
 #   bash run_clustering.sh
@@ -15,6 +22,7 @@
 #   COMBGC_INPUT       path to combgc_complete_summary.tsv
 #   RESULTS_DIR        path to output directory
 #   ANTISMASH_DIR      path to funcscan antiSMASH results (per-sample GBKs)
+#   DEEPBGC_DIR        path to funcscan deepBGC results (per-sample .bgc.gbk)
 #   FASTA_DIR          path to write per-BGC protein FASTAs
 #   PFAM_HMM           path to Pfam-A.hmm (pressed with hmmpress)
 #   PYTHON             python executable (default: python3)
@@ -33,6 +41,7 @@ RESULTS_DIR="${RESULTS_DIR:-${SCRIPT_DIR}/../results}"
 PYTHON="${PYTHON:-python3}"
 
 ANTISMASH_DIR="${ANTISMASH_DIR:-${ANALYSIS_DIR}/funcscan/results/bgc/antismash}"
+DEEPBGC_DIR="${DEEPBGC_DIR:-${ANALYSIS_DIR}/funcscan/results/bgc/deepbgc}"
 FASTA_DIR="${FASTA_DIR:-${REPO_ROOT}/rawdata/fastas/proteins}"
 PFAM_HMM="${PFAM_HMM:-${REPO_ROOT}/rawdata/pfam/Pfam-A.hmm}"
 BACKBONE_IDENTITY="${RESULTS_DIR}/backbone_identity.tsv"
@@ -57,6 +66,7 @@ log "GCF clustering pipeline starting"
 log "COMBGC_INPUT : ${COMBGC_INPUT}"
 log "RESULTS_DIR  : ${RESULTS_DIR}"
 log "ANTISMASH_DIR: ${ANTISMASH_DIR}"
+log "DEEPBGC_DIR  : ${DEEPBGC_DIR}"
 log "FASTA_DIR    : ${FASTA_DIR}"
 log "PFAM_HMM     : ${PFAM_HMM}"
 log "PYTHON       : $(${PYTHON} --version 2>&1)"
@@ -103,6 +113,21 @@ ${PYTHON} "${SCRIPT_DIR}/00_extract_bgc_fastas.py" \
     2>&1 | tee -a "${LOG_FILE}"
 
 log "Step 00 done in $(( $(date +%s) - START ))s"
+hr
+
+# ---------------------------------------------------------------------------
+# Step 00b — extract per-BGC protein FASTAs from deepBGC's pre-cut GBKs
+# ---------------------------------------------------------------------------
+log "Step 00b: extracting per-BGC protein FASTAs from deepBGC GBKs ..."
+START=$(date +%s)
+
+${PYTHON} "${SCRIPT_DIR}/00b_extract_deepbgc_fastas.py" \
+    --domains     "${DOMAIN_ARRAYS}" \
+    --deepbgc-dir "${DEEPBGC_DIR}" \
+    --output-dir  "${FASTA_DIR}" \
+    2>&1 | tee -a "${LOG_FILE}"
+
+log "Step 00b done in $(( $(date +%s) - START ))s"
 hr
 
 # ---------------------------------------------------------------------------
