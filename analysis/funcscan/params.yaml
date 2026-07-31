@@ -1,6 +1,6 @@
 input: "samplesheet.csv"
 outdir: "./results"
-multiqc_title: "BGC mining on 554 pre-assembled E. coli genomes from gastric cancer and chronic gastritis patients"
+multiqc_title: "BGC mining on 554 pre-assembled H. pylori genomes from gastric cancer and chronic gastritis patients"
 
 # -------------------------
 # BGC SCREENING CONFIG
