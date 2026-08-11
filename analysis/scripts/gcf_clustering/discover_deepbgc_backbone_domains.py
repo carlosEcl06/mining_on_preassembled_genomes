@@ -2,47 +2,32 @@
 """
 discover_deepbgc_backbone_domains.py
 
-Diagnostic tool (run manually, NOT part of run_clustering.sh): empirically
+Diagnostic tool (run manually, not part of run_clustering.sh): empirically
 discovers candidate backbone Pfam domains per deepBGC Product_class, by
 aggregating each sample's own {sample}.pfam.tsv (deepBGC's internal Pfam
-domain calls) and computing per-class domain prevalence — the same
-"find the dominant, specific marker gene" methodology used manually via
-hmmscan spot-checks for the antiSMASH classes (Terpene-precursor -> PF00348,
-Azole-containing-RiPP -> PF02624), but automated here since deepBGC's own
-Pfam calls are already clean PFxxxxx accessions (no NAME/ACC inconsistency
-like comBGC's PFAM_domains column — see 01_extract_domains.py's docstring).
+domain calls, already clean accessions) and computing per-class domain
+prevalence — the automated counterpart to the hmmscan spot-checks used for
+the antiSMASH classes.
 
-This does NOT modify BACKBONE_DOMAINS in 03_backbone_identity.py — it only
-produces a candidates table for review. Populating BACKBONE_DOMAINS from
-these results should still involve checking that the top domain makes
-biological sense for that Product_class, the same discipline applied to
-every class so far this project (the Terpene "false positive" episode
-happened precisely because that check was skipped once).
+Does NOT modify BACKBONE_DOMAINS in 03_backbone_identity.py — it only
+produces a candidates table. Populating BACKBONE_DOMAINS from these results
+should still involve checking that the top domain makes biological sense for
+that Product_class.
 
 For each BGC row (Prediction_tool == deepBGC), this script:
   1. Reads that sample's {sample_id}.pfam.tsv (cached per sample).
   2. Selects domain hits whose gene coordinates overlap [BGC_start, BGC_end]
-     on the matching contig (sequence_id == contig_id) — a standard interval
-     overlap test (gene_start < BGC_end AND gene_end > BGC_start).
-  3. Cross-checks this against the file's own in_cluster flag and counts how
-     often they disagree, as a sanity check that the coordinate systems
-     actually line up (rather than silently trusting a possible mismatch).
+     on the matching contig (standard interval overlap test).
+  3. Cross-checks against the file's own in_cluster flag as a sanity check
+     that the coordinate systems line up.
   4. Records which Pfam accessions were found for that BGC.
 
-Then, per Product_class, computes what fraction of BGCs in that class
-contain each Pfam accession, and writes a candidates TSV. Crucially, this
-also computes a SPECIFICITY score per (class, domain): own-class prevalence
-minus the highest prevalence that same domain reaches in any OTHER class.
-High within-class prevalence alone is not sufficient evidence of a genuine
-backbone marker — a first version of this analysis (2026-07-30) found that
-several top "Saccharide"/"Other"/"Unknown" candidates were generic,
-promiscuous tailoring-enzyme domains (a family of Methyltransferase_N Pfam
-entries) shared at similarly high prevalence across those three unrelated
-classes, echoing the exact false-positive pattern already caught once for
-antiSMASH's Terpene markers (see 01_extract_domains.py's docstring). Results
-are sorted by specificity, not raw prevalence, so genuinely class-specific
-candidates surface first even if their raw prevalence is lower than a
-promiscuous domain's.
+Per Product_class, computes what fraction of BGCs contain each accession,
+plus a specificity score (own-class prevalence minus the highest prevalence
+that domain reaches in any other class) — high within-class prevalence alone
+isn't sufficient evidence of a genuine backbone marker, since some domains
+are generic, promiscuous tailoring enzymes shared across unrelated classes.
+Results are sorted by specificity, not raw prevalence.
 
 Usage:
     python discover_deepbgc_backbone_domains.py \
@@ -153,12 +138,8 @@ def main():
               f"output — coordinate matching may be unreliable for these; "
               f"inspect before trusting results.", flush=True)
 
-    # --- build full prevalence matrix (all classes x all domains, unfiltered) ---
-    # needed so we can compute, for each candidate, how prevalent it is in
-    # OTHER classes too — high within-class prevalence alone isn't enough
-    # evidence of a genuine backbone marker if the same domain is equally
-    # common elsewhere (see module docstring: this is exactly the trap that
-    # produced false "Terpene" markers for Other/Saccharide BGCs previously).
+    # Full prevalence matrix (all classes x all domains), needed to compute
+    # how prevalent each candidate is in OTHER classes too (see docstring).
     prevalence_matrix: dict[str, dict[str, float]] = {}
     for cls, domain_counts in class_domain_bgc_counts.items():
         total = class_total_bgcs[cls]
@@ -198,11 +179,7 @@ def main():
 
     out_df = pd.DataFrame(rows_out)
     if not out_df.empty:
-        # Sort by specificity within class, not raw prevalence — a domain
-        # that's 100% prevalent in its own class but ALSO 90%+ prevalent in
-        # some other class is a promiscuous tailoring enzyme, not a backbone
-        # marker, and should sort BELOW a domain that's 60% prevalent here
-        # and near-0% everywhere else.
+        # Sort by specificity within class, not raw prevalence (see docstring).
         out_df = out_df.sort_values(["Product_class", "specificity"], ascending=[True, False])
 
     pathlib.Path(args.output).parent.mkdir(parents=True, exist_ok=True)

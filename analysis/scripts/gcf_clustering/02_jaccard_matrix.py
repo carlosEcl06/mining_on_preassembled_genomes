@@ -6,9 +6,8 @@ Computes pairwise Jaccard similarity between all BGC domain arrays.
 BGC pairs with Jaccard similarity below MIN_JACCARD are excluded (set to 0).
 Outputs a sparse pairwise TSV (bgc_i, bgc_j, jaccard) for use in 03 and 04.
 
-bgc_id is read directly from the bgc_id column written by 01_extract_domains.py
-(sample_id__contig_id__BGC_start) — it is NOT re-derived from sample_id/contig_id
-here, since that pair alone is not unique (see 01's module docstring).
+bgc_id is read directly from the bgc_id column written by 01_extract_domains.py,
+not re-derived from sample_id/contig_id (see 01's module docstring).
 
 Usage:
     python 02_jaccard_matrix.py \

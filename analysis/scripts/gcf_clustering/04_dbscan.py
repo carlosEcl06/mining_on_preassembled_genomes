@@ -42,11 +42,9 @@ from scipy.sparse import lil_matrix, csr_matrix
 from sklearn.cluster import DBSCAN
 from tqdm import tqdm
 
-# epsilon = 0.56 corresponds to grouping BGCs with identical Pfam domain content
-# under the Jaccard-only fallback (Jaccard = 1.0, distance = 1 - sqrt(0.2) ≈ 0.5528).
-# Under the full score (identity=1.0, Jaccard=1.0), distance = 1 - sqrt(1.0) = 0.0,
-# so 0.56 remains a valid (more permissive, never more restrictive) upper bound
-# when --identity is used.
+# epsilon = 0.56 groups BGCs with identical Pfam domain content under the
+# Jaccard-only fallback (Jaccard = 1.0, distance = 1 - sqrt(0.2) ≈ 0.5528);
+# it remains a valid, more permissive upper bound when --identity is used.
 DBSCAN_EPSILON = 0.56
 DBSCAN_MIN_SAMPLES = 2
 

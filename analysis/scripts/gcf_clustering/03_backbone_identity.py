@@ -40,64 +40,25 @@ import pandas as pd
 from scipy.optimize import linear_sum_assignment
 
 
-# Backbone domains to use for hmmalign, per class. These MUST be real Pfam
+# Backbone domains to use for hmmalign, per class. Must be real Pfam
 # accessions fetchable via `hmmfetch Pfam-A.hmm <accession>` (versioned form
-# resolved automatically at runtime — see build_accession_index()).
+# resolved at runtime, see build_accession_index()). Keys are the
+# Product_class strings from comBGC/antiSMASH/deepBGC (backbone_class is
+# sourced directly from Product_class, see 01_extract_domains.py).
 #
-# Keys are the ACTUAL Product_class strings from combgc/antiSMASH/deepBGC
-# (backbone_class is sourced directly from Product_class as of 2026-07-29 —
-# see 01_extract_domains.py's module docstring for why the old Pfam-matching
-# heuristic was dropped: it produced false-positive rates as high as 94%
-# ("Saccharide" BGCs mislabeled "Terpene"), because the marker accessions it
-# used were never independently verified against this dataset).
+# FASTA is available for antiSMASH (00_extract_bgc_fastas.py) and deepBGC
+# (00b_extract_deepbgc_fastas.py). GECCO (37 BGCs) has no FASTA source and
+# is not reachable here.
 #
-# FASTA is available for antiSMASH (00_extract_bgc_fastas.py) and, as of
-# 2026-07-30, deepBGC (00b_extract_deepbgc_fastas.py, using deepBGC's own
-# pre-cut {sample}.bgc.gbk). GECCO (37 BGCs) still has no FASTA source and
-# remains unreachable here — see run_clustering.sh's header comment.
-#
-# deepBGC classes were resolved via discover_deepbgc_backbone_domains.py,
-# which aggregates deepBGC's own {sample}.pfam.tsv (already clean PFxxxxx
-# accessions, no NAME/ACC inconsistency) and computes a SPECIFICITY score per
-# (class, domain): own-class prevalence minus the highest prevalence that
-# domain reaches in any OTHER class. Two deepBGC classes — "RiPP" (best
-# specificity 0.31) and "Other" (best specificity 0.28) — never cleared a
-# specificity high enough to trust (every other resolved class scored
-# 0.47-0.98) and were deliberately left out, matching their entries' absence
-# below; they fall back to Jaccard-only, same as "Unknown" and "Arylpolyene".
-#
-# Provenance per entry:
-#   "Terpene-precursor" (antiSMASH): VERIFIED 2026-07-28 — ran hmmscan
-#       directly on 4 different BGC FASTAs and confirmed PF00348 (Polyprenyl
-#       synthetase — the enzyme comBGC's own "PT_FPPS_like" marker refers to)
-#       present in all 4/4 spot-checks.
-#   "Azole-containing-RiPP" (antiSMASH): VERIFIED 2026-07-29 — ran hmmscan
-#       directly on 3 different BGC FASTAs; PF02624.22 (YcaO domain, matching
-#       comBGC's own "YcaO" marker name) was present and clearly hit
-#       (E < 1e-5) in all 3/3 spot-checks.
-#   "Arylpolyene" (antiSMASH): left EMPTY deliberately. n=1 BGC in this
-#       dataset, so there can never be a within-class pair to compute
-#       identity for regardless of which accession is chosen.
-#   "NRP" (deepBGC): specificity 0.783 for all 5 accessions (present in only
-#       3.7% of any other class). Not canonical NRPS C/A/T domains — the
-#       consistent presence of NAD-binding/dehydrogenase domains instead
-#       suggests an NIS (NRPS-independent siderophore) pathway in this
-#       dataset's "NRP"-labeled BGCs.
-#   "Saccharide" (deepBGC): PF13579 at specificity 0.984 (near-perfect);
-#       PF13692/PF00534/PF13439 (canonical glycosyltransferase families) at
-#       0.88.
-#   "Polyketide" (deepBGC): PF00109 (canonical ketosynthase, the most
-#       rigorous marker — only 30.6% prevalence but 0.1% background, so
-#       specificity 0.305) plus PF00106/PF13561/PF08659 (~0.47-0.48
-#       specificity, broader but still clearly class-associated reductases).
-#   "Terpene" (deepBGC): specificity 0.6-0.8. NOTE this is a DIFFERENT class
-#       from antiSMASH's "Terpene-precursor" above (n=5 vs n=554) — kept
-#       separate rather than merged, since nothing yet confirms these two
-#       differently-named classes share the same biosynthetic family.
-#   "Polyketide-Terpene" (deepBGC, n=2): PF00348 at specificity 1.0 — the
-#       same accession independently verified for antiSMASH's
-#       Terpene-precursor above. n=2 means at most one pair is possible
-#       within this class, but the accession is free to include.
+# antiSMASH entries were verified by running hmmscan directly on a handful
+# of BGC FASTAs per class and confirming the domain hit. deepBGC entries
+# were resolved via discover_deepbgc_backbone_domains.py, which ranks
+# candidate Pfam accessions per Product_class by specificity (own-class
+# prevalence minus the highest prevalence reached in any other class);
+# classes without a sufficiently specific candidate ("RiPP", "Other") are
+# left out and fall back to Jaccard-only, same as "Unknown"/"Arylpolyene".
+# "Terpene" (deepBGC) is a distinct, smaller class from antiSMASH's
+# "Terpene-precursor" and is kept separate rather than merged.
 BACKBONE_DOMAINS = {
     "Terpene-precursor":     ["PF00348"],
     "Azole-containing-RiPP": ["PF02624"],
@@ -145,10 +106,8 @@ def read_fasta(path: pathlib.Path) -> dict[str, str]:
     return seqs
 
 
-# Module-level counters so we surface the first couple of HMMER failures with
-# their actual stderr, instead of silently returning {} for all 382k pairs like
-# before — that silence is exactly what hid the real cause of "0 pairs had
-# backbone domain sequences" across two previous runs.
+# Counters so the first few HMMER failures surface their stderr instead of
+# silently returning {} for every pair.
 _HMMSCAN_FAILURES_SHOWN = 0
 _HMMFETCH_FAILURES_SHOWN = 0
 _HMMALIGN_FAILURES_SHOWN = 0
@@ -157,26 +116,17 @@ _MAX_FAILURES_SHOWN = 3
 
 def run_hmmscan_domtbl(fasta: dict[str, str], pfam_hmm: str) -> list[tuple[str, str]]:
     """
-    Run hmmscan ONCE for this BGC's full protein set against the full Pfam-A.hmm
-    database, returning (bare_accession, protein_id) for every domain hit.
-
-    IMPORTANT: hmmscan is never told which domain we're looking for — it always
-    scans the query proteins against the entire Pfam-A.hmm database regardless.
-    The previous version called this once per (bgc_id, domain) combination, but
-    since the underlying hmmscan command and its output were byte-for-byte
-    identical across those calls (only the post-hoc filter differed), this
-    re-ran the same multi-second scan 4-6x per BGC for no benefit. This version
-    runs hmmscan once per bgc_id and returns all hit rows unfiltered; filtering
-    for a specific domain is then a cheap in-memory operation (see
-    get_aligned_domain_seqs) — the set of hits returned is identical to before,
-    just computed once instead of once per domain.
+    Run hmmscan once for this BGC's full protein set against Pfam-A.hmm,
+    returning (bare_accession, protein_id) for every domain hit. Scans all
+    query proteins against the whole database regardless of which domain is
+    wanted; per-domain filtering happens afterward (see
+    get_aligned_domain_seqs), so hmmscan only runs once per bgc_id.
 
     hmmscan --domtblout column layout (whitespace-separated):
-        [0] target name        — the PROFILE's human-readable name (e.g. "Alcohol_dh"),
-                                  NOT its Pfam accession
-        [1] target accession   — the Pfam accession, e.g. "PF00107.30" (versioned)
+        [0] target name      — profile name (e.g. "Alcohol_dh"), not accession
+        [1] target accession — Pfam accession, e.g. "PF00107.30" (versioned)
         [2] tlen
-        [3] query name         — the query PROTEIN id
+        [3] query name       — query protein id
         ...
     """
     if not fasta:
@@ -301,13 +251,9 @@ def pairwise_identity(seq_a: str, seq_b: str) -> float:
 def build_accession_index(pfam_hmm_path: str) -> dict[str, str]:
     """
     Map bare Pfam accession (no version) -> full versioned accession, by
-    scanning 'ACC' lines in the flat-text Pfam-A.hmm file.
-
-    hmmfetch requires an EXACT match on the indexed key, which is the
-    versioned accession (e.g. 'PF00109.28'). Calling hmmfetch with a bare
-    accession like 'PF00109' fails with "not found in SSI index" even
-    though hmmpress ran correctly and the domain is present — this is what
-    caused every backbone domain lookup to fail in earlier runs.
+    scanning 'ACC' lines in the flat-text Pfam-A.hmm file. hmmfetch requires
+    an exact match on the versioned accession (e.g. 'PF00109.28'); a bare
+    accession fails even when the domain is present and correctly pressed.
     """
     accession_map = {}
     with open(pfam_hmm_path, errors="replace") as fh:
@@ -362,14 +308,12 @@ def main():
             f"({', '.join(missing)}). Run: hmmpress {args.pfam_hmm}"
         )
 
-    # Build bare→versioned accession map once, since hmmfetch needs the exact
-    # versioned key (see build_accession_index docstring).
     print(f"[03] Indexing Pfam accessions in {args.pfam_hmm} ...", flush=True)
     accession_map = build_accession_index(args.pfam_hmm)
     print(f"[03] Found {len(accession_map):,} Pfam accessions.", flush=True)
 
-    # Resolve BACKBONE_DOMAINS to versioned accessions; warn (once) about any
-    # that aren't present in this Pfam-A.hmm release rather than failing later.
+    # Resolve BACKBONE_DOMAINS to versioned accessions, warning about any
+    # missing from this Pfam-A.hmm release rather than failing later.
     resolved_backbone_domains: dict[str, list[str]] = {}
     for cls, doms in BACKBONE_DOMAINS.items():
         resolved = []
@@ -382,9 +326,7 @@ def main():
             resolved.append(versioned)
         resolved_backbone_domains[cls] = resolved
 
-    # Smoke-test hmmfetch against a real, correctly versioned accession —
-    # just take the first resolved accession from any class (no need to prefer
-    # a specific class now that BACKBONE_DOMAINS is keyed by Product_class).
+    # Smoke-test hmmfetch against the first resolved accession, whichever class.
     smoke_domain = next((v for vs in resolved_backbone_domains.values() for v in vs), None)
     if smoke_domain is None:
         raise SystemExit("[03] ERROR: none of the BACKBONE_DOMAINS accessions were "
@@ -417,9 +359,8 @@ def main():
     fasta_dir = pathlib.Path(args.fasta_dir)
     pfam_hmm  = args.pfam_hmm
 
-    # Cache FASTA files and hmmscan hits per bgc_id (ONE hmmscan call per BGC,
-    # not per domain — see run_hmmscan_domtbl docstring), plus per-(bgc_id,
-    # domain) aligned sequences to avoid redundant hmmfetch/hmmalign calls.
+    # Cache FASTA files, hmmscan hits, and aligned sequences per bgc_id/domain
+    # to avoid redundant hmmscan/hmmfetch/hmmalign calls.
     fasta_cache:   dict[str, dict[str, str]] = {}
     hmmscan_cache: dict[str, list[tuple[str, str]]] = {}
     domain_cache:  dict[tuple, list[str]] = {}   # (bgc_id, domain) → aligned seqs

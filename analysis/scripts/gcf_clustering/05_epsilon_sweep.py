@@ -5,15 +5,12 @@
 Diagnostic sweep of the DBSCAN epsilon parameter, to characterize whether GCF
 clustering granularity is dominated by a single global epsilon poorly suited
 to heterogeneous cluster density — e.g. a near-clonal Terpene-precursor
-"family" (554 BGCs differing by a gene or fragment) sitting alongside
-genuinely diverse, sparser families (Azole-containing-RiPP, deepBGC/GECCO
-Product_class values such as Polyketide, NRP, RiPP, Saccharide).
+"family" (554 BGCs) sitting alongside sparser, more diverse families.
 
-This does NOT re-run hmmscan/hmmfetch/hmmalign (03_backbone_identity.py) — it
-reuses the already-computed jaccard_pairs.tsv and backbone_identity.tsv, builds
-the pairwise distance matrix ONCE (same logic as 04_dbscan.py), and re-runs only
-DBSCAN.fit_predict() for each candidate epsilon. This is why it's fast (~1 min
-for a few dozen epsilon values) compared to the ~90 min step 03 takes.
+Reuses the already-computed jaccard_pairs.tsv and backbone_identity.tsv,
+builds the pairwise distance matrix once (same logic as 04_dbscan.py), and
+re-runs only DBSCAN.fit_predict() per candidate epsilon — fast (~1 min for a
+few dozen values) since it skips 03's ~90 min hmmscan/hmmfetch/hmmalign step.
 
 For each epsilon, records:
   - n_gcfs                : number of non-singleton clusters
@@ -75,10 +72,8 @@ def similarity_score_full(jaccard: np.ndarray, identity: np.ndarray) -> np.ndarr
 
 
 def build_distance_matrix(domains_path: str, pairs_path: str, identity_path: str | None):
-    """Same construction as 04_dbscan.py — kept in sync deliberately, duplicated
-    here rather than imported so this script stays a standalone diagnostic tool
-    consistent with the rest of gcf_clustering/'s style (each script is
-    self-contained)."""
+    """Same construction as 04_dbscan.py, duplicated rather than imported so
+    this script stays a standalone diagnostic tool."""
     print(f"[05] Reading domain arrays from {domains_path} ...", flush=True)
     df = pd.read_csv(domains_path, sep="\t", dtype=str)
     if "bgc_id" not in df.columns:
