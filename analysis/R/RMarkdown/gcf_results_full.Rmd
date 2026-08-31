@@ -499,12 +499,9 @@ This is the analytically relevant ranking: the qualifying GCFs sorted by
 Fisher p_adj (BH, corrected across all `r n_gcf_qualifying` qualifying GCFs).
 
 ```{r gcf-fisher-ranked-full}
-# NOTE: `domains` (bgc_domain_arrays.tsv) already carries the correct
-# `bgc_id` column (sample_id__contig_id__BGC_start). Reconstructing it as
-# paste0(sample_id, "__", contig_id) drops the BGC_start disambiguator and
-# never matches `gcf`'s real bgc_id whenever a contig has more than one
-# BGC on it — which silently produced "Top domains" = NA for every single
-# GCF in this table. Just join on the existing column instead.
+# join on the existing bgc_id column (sample_id__contig_id__BGC_start);
+# reconstructing it from sample_id/contig_id alone drops the BGC_start
+# disambiguator and misses contigs with more than one BGC.
 domains_gcf <- domains |>
   left_join(gcf |> select(bgc_id, gcf_id), by = "bgc_id")
 

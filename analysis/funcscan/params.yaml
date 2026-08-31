@@ -1,6 +1,6 @@
 input: "samplesheet.csv"
 outdir: "./results"
-multiqc_title: "BGC mining on 554 pre-assembled E. coli genomes from gastric cancer and chronic gastritis patients"
+multiqc_title: "BGC mining on 554 pre-assembled H. pylori genomes from gastric cancer and chronic gastritis patients"
 
 # -------------------------
 # BGC SCREENING CONFIG
@@ -13,7 +13,7 @@ bgc_savefilteredcontigs: true
 # FUNCTIONAL ANNOTATION CONFIG
 # -------------------------
 annotation_tool: "bakta"
-annotation_bakta_db: "/dados/felipe/Carlos_temporario/mining_on_preassembled_genomes/analysis/funcscan/pipeline/third_party_databases/bakta/db"
+annotation_bakta_db: "./pipeline/third_party_databases/bakta/db"
 annotation_bakta_singlemode: true
 annotation_bakta_translationtable: 11
 annotation_bakta_gram: "-"
@@ -36,12 +36,12 @@ annotation_bakta_activate_plot: true
 # -------------------------
 run_protein_annotation: true
 protein_annotation_tool: "InterProScan"
-protein_annotation_interproscan_db: "/dados/felipe/Carlos_temporario/mining_on_preassembled_genomes/analysis/funcscan/pipeline/third_party_databases/interproscan/db/interproscan-5.77-108.0"
+protein_annotation_interproscan_db: "./pipeline/third_party_databases/interproscan/db/interproscan-5.77-108.0"
 
 # -------------------------
 # antiSMASH CONFIG
 # -------------------------
-bgc_antismash_db: "/dados/felipe/Carlos_temporario/mining_on_preassembled_genomes/analysis/funcscan/pipeline/third_party_databases/antismash"
+bgc_antismash_db: "./pipeline/third_party_databases/antismash"
 bgc_antismash_contigminlength: 3000
 bgc_antismash_cbgeneral: true
 bgc_antismash_cbknownclusters: true
@@ -57,7 +57,7 @@ bgc_antismash_hmmdetectionstrictness: "relaxed"
 # -------------------------
 # DeepBGC CONFIG
 # -------------------------
-bgc_deepbgc_db: "/dados/felipe/Carlos_temporario/mining_on_preassembled_genomes/analysis/funcscan/pipeline/third_party_databases/deepbgc/data"
+bgc_deepbgc_db: "./pipeline/third_party_databases/deepbgc/data"
 bgc_deepbgc_prodigalsinglemode: true
 
 # -------------------------

@@ -2,10 +2,8 @@
 # setup_env.sh — cria o ambiente conda dedicado ao pipeline de GCFs
 set -euo pipefail
 
-# 'conda' costuma ser uma função de shell definida via 'conda init' no .bashrc,
-# que scripts não-interativos (./setup_env.sh) não carregam — por isso o comando
-# "some" mesmo funcionando no shell interativo. Localizamos o conda.sh direto,
-# em vez de depender do comando 'conda' já estar no PATH/função.
+# 'conda' é uma função de shell definida via 'conda init', que scripts
+# não-interativos não carregam; localizamos o conda.sh diretamente.
 CONDA_SH=""
 for candidate in \
     "${HOME}/miniconda3/etc/profile.d/conda.sh" \

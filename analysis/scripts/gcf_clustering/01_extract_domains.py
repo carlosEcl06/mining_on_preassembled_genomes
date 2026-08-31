@@ -8,40 +8,26 @@ Applies pre-clustering filters:
   - BGCs with empty PFAM_domains are excluded
 Outputs a TSV with one BGC per row, ready for pairwise Jaccard computation.
 
-backbone_class convention (revised 2026-07-29): backbone_class is now taken
-DIRECTLY from Product_class, the classification already assigned by each
-prediction tool (antiSMASH's curated rule-based cluster typing, deepBGC's ML
-classifier, GECCO's classifier) — not re-derived from a hand-picked Pfam
-accession list (the old BACKBONE_MAP/classify_backbone() approach).
+backbone_class is taken directly from Product_class, the classification each
+prediction tool already assigns (antiSMASH's rule-based typing, deepBGC's ML
+classifier, GECCO's classifier), rather than being re-derived from a
+hand-picked Pfam accession list. An earlier heuristic based on such a list
+was dropped after cross-tabulation showed it mislabeling most deepBGC
+"Saccharide"/"Other" BGCs as "Terpene" (its marker accessions weren't
+specific to terpene biosynthesis).
 
-This replaces an approach that was empirically shown to be unreliable: a
-cross-tabulation of the old classify_backbone() output against Product_class
-found that of BGCs labeled "Saccharide" by deepBGC, 94% (117/125) were
-mislabeled "Terpene" by our own domain-matching heuristic — and 100% (83/83)
-of "Other" BGCs were mislabeled "Terpene" too — because the deepBGC "Terpene"
-marker accessions we'd picked (PF04909, PF03544, PF13088) are not specific to
-terpene biosynthesis and appear incidentally across unrelated BGC classes.
-Trusting each tool's own Product_class avoids this false-positive problem
-entirely, since it comes from purpose-built classification logic rather than
-a post-hoc accession list assembled without this kind of verification.
+Product_class is missing (NaN) for most deepBGC BGCs — deepBGC only
+populates it when its classifier is confident enough. This collapses to
+backbone_class = "Unknown" here, same as GECCO's explicit "Unknown" label;
+it only affects the descriptive backbone_class column, since backbone
+identity computation (00_extract_bgc_fastas.py) only covers antiSMASH BGCs,
+whose Product_class is always populated.
 
-Product_class is missing (NaN) for 1,005 of 1,465 retained deepBGC BGCs
-(68.6%) — deepBGC only populates it when its classifier is confident enough,
-leaving it blank otherwise (distinct from GECCO's "Unknown", which IS an
-explicit label). Both cases collapse to backbone_class = "Unknown" here,
-since both mean "the tool did not confidently assign a class" — this has no
-effect on backbone identity computation (00_extract_bgc_fastas.py only
-extracts antiSMASH BGCs, whose Product_class is always populated), only on
-the descriptive backbone_class column in the final output.
-
-bgc_id convention: sample_id + contig_id ALONE is not unique — a single contig
-can carry more than one antiSMASH region (region001, region002, ...) or be
-called independently by more than one prediction tool, producing multiple
-rows with the same (sample_id, contig_id) pair. BGC_start (the genomic
-coordinate where the region/cluster begins) disambiguates these cases, so
-bgc_id is built here as sample_id__contig_id__BGC_start and written out as
-its own column — every downstream script (00, 02, 03, 04) should read this
-column directly rather than re-deriving bgc_id from sample_id/contig_id alone.
+bgc_id convention: sample_id + contig_id alone is not unique, since a contig
+can carry more than one antiSMASH region or be called by more than one
+prediction tool. BGC_start disambiguates these cases, so bgc_id is built here
+as sample_id__contig_id__BGC_start and written out as its own column — every
+downstream script (00, 02, 03, 04) reads this column directly.
 
 Usage:
     python 01_extract_domains.py \
@@ -70,16 +56,11 @@ def parse_args():
 def parse_domain_array(raw: str) -> list[str]:
     """Split a PFAM_domains string into a deduplicated, sorted list of domain IDs.
 
-    Note: this field mixes Pfam accessions (PFxxxxx) and Pfam family NAMEs
-    (e.g. 'YcaO', 'PP-binding') inconsistently BY TOOL — antiSMASH always
-    reports the NAME, deepBGC/GECCO always report the ACC, for the same
-    underlying Pfam family (verified 2026-07-29 by checking co-occurrence of
-    several NAME/ACC pairs — e.g. antiSMASH's 'PP-binding' vs deepBGC's
-    'PF00550' never co-occur within the same tool). This does NOT affect
-    backbone_class (now sourced from Product_class, see module docstring),
-    but is a known limitation of the Jaccard similarity in 02_jaccard_matrix.py
-    for any future CROSS-TOOL domain-content comparison — tracked as a
-    low-priority follow-up, not fixed here.
+    Note: this field mixes Pfam accessions (PFxxxxx) and Pfam family names
+    (e.g. 'YcaO') inconsistently by tool — antiSMASH reports the name,
+    deepBGC/GECCO report the accession, for the same Pfam family. Doesn't
+    affect backbone_class (sourced from Product_class), but is a known
+    limitation for any future cross-tool Jaccard comparison in 02.
     """
     if pd.isna(raw) or str(raw).strip() == "":
         return []
@@ -88,12 +69,8 @@ def parse_domain_array(raw: str) -> list[str]:
 
 
 def build_bgc_id(df: pd.DataFrame) -> pd.Series:
-    """
-    Canonical, unique BGC identifier: sample_id__contig_id__BGC_start.
-    BGC_start disambiguates multiple regions/calls on the same contig
-    (see module docstring). Falls back to sample_id__contig_id__NA if
-    BGC_start is missing, with a warning left to the caller to surface.
-    """
+    """Canonical, unique BGC identifier: sample_id__contig_id__BGC_start.
+    Falls back to sample_id__contig_id__NA if BGC_start is missing."""
     start = df["BGC_start"].fillna("NA").astype(str)
     return df["sample_id"] + "__" + df["contig_id"] + "__" + start
 
@@ -127,8 +104,7 @@ def main():
         lambda x: "|".join(parse_domain_array(x))
     )
 
-    # --- backbone_class: trust each tool's own Product_class directly ---
-    # (see module docstring for why this replaced the old Pfam-matching heuristic)
+    # --- backbone_class: each tool's own Product_class (see module docstring) ---
     n_missing_product_class = df["Product_class"].isna().sum()
     df["backbone_class"] = df["Product_class"].fillna("Unknown")
     print(f"[01] backbone_class sourced from Product_class "
@@ -138,7 +114,7 @@ def main():
     for cls, count in df["backbone_class"].value_counts().items():
         print(f"      {count:5d}  {cls}", flush=True)
 
-    # --- canonical bgc_id (see module docstring: sample_id__contig_id is NOT unique) ---
+    # --- canonical bgc_id ---
     df["bgc_id"] = build_bgc_id(df)
     n_dup = df["bgc_id"].duplicated().sum()
     if n_dup:

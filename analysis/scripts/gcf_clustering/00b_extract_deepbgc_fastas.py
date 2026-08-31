@@ -8,36 +8,25 @@ the SAME directory 00_extract_bgc_fastas.py uses for antiSMASH — bgc_id is
 globally unique across tools (sample_id__contig_id__BGC_start), so sharing
 one directory carries no collision risk.
 
-deepBGC output layout (confirmed on this project's server):
+deepBGC output layout:
     {deepbgc_dir}/{sample_id}/{sample_id}.bgc.gbk
 
-Unlike antiSMASH (one file per region), deepBGC packs ALL of a sample's
-predicted BGC regions into a SINGLE multi-record GenBank file — one
-LOCUS/record per predicted region, already cut down to just that region's DNA
-(confirmed 2026-07-30: a spot-checked sample's {sample}.full.gbk has 1,148 CDS
-genome-wide vs {sample}.bgc.gbk's 47 CDS across ~5 regions). This means that,
-unlike antiSMASH, coordinate-based disambiguation is usually unnecessary: if a
+Unlike antiSMASH (one file per region), deepBGC packs all of a sample's
+predicted BGC regions into a single multi-record GenBank file — one
+LOCUS/record per region, already cut down to that region's DNA. If a
 contig_id appears as only one LOCUS in the sample's .bgc.gbk, that record IS
-the BGC. Coordinate matching is still needed for the rarer case of two or
-more deepBGC-predicted regions landing on the same contig_id within one
-sample (confirmed this happens, e.g. contig_113 in one spot-checked sample) —
-this uses the record's ACCESSION/VERSION field, which deepBGC sets to a
-synthetic "{contig_id}_{start}-{end}[.version]" string (e.g.
-'contig_21_6-9057.1') giving EXACT original genomic coordinates, falling back
-to a 'source' feature if that's ever absent.
+the BGC; coordinate matching (via the record's ACCESSION/VERSION field, set
+by deepBGC to a synthetic "{contig_id}_{start}-{end}[.version]" string, e.g.
+'contig_21_6-9057.1') is only needed when two or more predicted regions land
+on the same contig_id within one sample.
 
-IMPORTANT bug fixed 2026-07-30: the first version of this script grouped
-records by Biopython's record.id, which for these files is exactly that
-synthetic ACCESSION string (e.g. 'contig_21_6-9057.1') — NOT the contig_id.
-This caused every single row to fail with "no record for contig X" (0/1465
-FASTAs written). The fix groups by record.name instead, which Biopython
-parses from the LOCUS line and does equal the real contig_id.
+Note: records are grouped by Biopython's record.name (from the LOCUS line,
+equal to the real contig_id), not record.id (which holds that synthetic
+ACCESSION string).
 
-Only BGCs present in bgc_domain_arrays.tsv (i.e. that survived the 01
-filters) are processed, and only Prediction_tool == deepBGC rows are handled
-here (antiSMASH is 00_extract_bgc_fastas.py; GECCO extraction is not yet
-implemented — GECCO's own output only has tabular gene/feature TSVs with no
-embedded protein sequence, and only 37 BGCs total, so it's deferred).
+Only BGCs present in bgc_domain_arrays.tsv, Prediction_tool == deepBGC, are
+processed here (antiSMASH is 00_extract_bgc_fastas.py; GECCO has no embedded
+protein sequence in its own output, so it's not covered).
 
 Usage:
     python 00b_extract_deepbgc_fastas.py \
@@ -78,12 +67,8 @@ def parse_args():
 def load_sample_records(gbk_path: pathlib.Path) -> dict[str, list]:
     """Parse a sample's multi-record .bgc.gbk once, grouped by contig_id.
 
-    IMPORTANT: group by record.name (parsed from the LOCUS line), NOT
-    record.id. Biopython's record.id comes from the ACCESSION/VERSION line,
-    which deepBGC sets to a synthetic "{contig_id}_{start}-{end}.1" string
-    (e.g. 'contig_21_6-9057.1') — completely different from record.name
-    ('contig_21'), which IS the actual contig_id. Grouping by record.id
-    caused every row to fail to match in the first version of this script.
+    Groups by record.name (parsed from the LOCUS line, the real contig_id),
+    NOT record.id (the synthetic ACCESSION/VERSION string deepBGC assigns).
     """
     by_contig: dict[str, list] = {}
     for record in SeqIO.parse(str(gbk_path), "genbank"):
@@ -99,11 +84,8 @@ def record_span(record):
     Return (start, end) original genomic coordinates for a record.
 
     Primary source: the ACCESSION/VERSION field, which deepBGC sets to
-    "{contig_id}_{start}-{end}[.version]" (e.g. 'contig_21_6-9057.1') —
-    confirmed 2026-07-30 by direct inspection. This is exact, unlike trying
-    to infer it from a 'source' feature (which may not even be present).
-    Falls back to the 'source' feature location if the accession doesn't
-    parse as expected.
+    "{contig_id}_{start}-{end}[.version]" (e.g. 'contig_21_6-9057.1').
+    Falls back to the 'source' feature location if that doesn't parse.
     """
     for accession in record.annotations.get("accessions", []):
         m = ACCESSION_COORDS_RE.match(accession)
@@ -210,8 +192,7 @@ def main():
     n_ambiguous = 0
     n_empty = 0
 
-    # Cache parsed .bgc.gbk per sample (grouped by contig_id) to avoid re-parsing
-    sample_cache: dict[str, dict] = {}
+    sample_cache: dict[str, dict] = {}  # parsed .bgc.gbk per sample, grouped by contig_id
 
     for row in df.itertuples(index=False):
         bgc_id = row.bgc_id

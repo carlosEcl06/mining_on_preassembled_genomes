@@ -5,26 +5,19 @@
 Extracts per-BGC protein FASTA files from antiSMASH region GenBank files, for use
 as --fasta-dir input to 03_backbone_identity.py.
 
-antiSMASH output layout (confirmed on this project's server):
+antiSMASH output layout:
     {antismash_dir}/{sample_id}/{contig_id}.region001.gbk
 
-A single contig can have MORE THAN ONE antiSMASH region (region001, region002, ...).
-Each region corresponds to a distinct row in bgc_domain_arrays.tsv, distinguished
-by BGC_start/BGC_end (see 01_extract_domains.py's bgc_id convention:
-sample_id__contig_id__BGC_start). Earlier versions of this script globbed ALL
-region*.gbk files for a contig and merged their CDS into a single FASTA regardless
-of which row was being processed — this silently mixed proteins from unrelated
-regions together whenever a contig had more than one region. This version instead
-matches each row to its own region file by comparing BGC_start/BGC_end against the
-region's genomic span (its 'source' feature location, which antiSMASH GBKs preserve
-in original contig coordinates), and falls back to the single candidate file when
-there is only one.
+A contig can have more than one antiSMASH region (region001, region002, ...),
+each a distinct row in bgc_domain_arrays.tsv distinguished by BGC_start/BGC_end
+(see 01_extract_domains.py's bgc_id convention). Each row is matched to its own
+region file by comparing BGC_start/BGC_end against the region's genomic span
+(its 'source' feature location, in original contig coordinates), falling back
+to the single candidate file when there is only one.
 
-Only BGCs present in bgc_domain_arrays.tsv (i.e. that survived the 01 filters) are
-processed, and only BGCs predicted by antiSMASH have a region GBK to extract from
-(deepBGC/GECCO BGCs have no antiSMASH region file and are skipped — their
-sequence_identity falls back to 0.0 in 03/04, which is the documented behavior
-for BGCs without backbone domains).
+Only BGCs present in bgc_domain_arrays.tsv are processed. deepBGC/GECCO BGCs
+have no antiSMASH region file and are skipped (their sequence_identity falls
+back to 0.0 in 03/04).
 
 Usage:
     python 00_extract_bgc_fastas.py \
@@ -94,8 +87,7 @@ def pick_region_gbk(candidates: list[pathlib.Path], bgc_start, bgc_end):
         return candidates[0]
 
     if bgc_start is None or bgc_end is None:
-        # Can't disambiguate without coordinates; bail rather than guess wrong.
-        return None
+        return None  # can't disambiguate without coordinates
 
     best, best_overlap = None, -1
     for gbk in candidates:
