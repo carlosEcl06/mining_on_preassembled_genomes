@@ -2,6 +2,7 @@ rawdata/fastas/
 rawdata/md5sum.txt
 rawdata/README.md
 rawdata/pfam/
+rawdata/metadata/12876_2025_4595_MOESM1_ESM.xlsx
 
 *.nextflow*
 
