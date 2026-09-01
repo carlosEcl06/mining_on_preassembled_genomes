@@ -12,8 +12,9 @@ analysis/funcscan/pipeline/
 
 analysis/R/RMarkdown/render/
 analysis/R/RMarkdown/*cache/
+analysis/R/RMarkdown/_freeze/
 
 analysis/scripts/results/
 
-analysis/SNNB_poster/Poster_IX_SNNB_final.pdf
+analysis/SNNB/
 analysis/BSB_short_paper/

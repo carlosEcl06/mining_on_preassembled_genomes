@@ -3,18 +3,17 @@ title: "GCF Clustering Results"
 subtitle: "Consolidated exploratory and full-cohort statistical analysis of biosynthetic gene cluster families in *H. pylori*"
 author: "LIMA, Carlos; SILVA JUNIOR, Wilson"
 date: "`r Sys.Date()`"
-output:
-  html_document:
+format:
+  html:
     toc: true
-    toc_float: true
-    toc_depth: 3
+    toc-depth: 3
     theme: flatly
-    highlight: tango
-    df_print: paged
-  pdf_document:
-    latex_engine: xelatex
+    highlight-style: tango
+    df-print: paged
+  pdf:
     toc: true
-    toc_depth: 3
+    toc-depth: 3
+    pdf-engine: xelatex
 ---
 
 ```{r setup, include=FALSE}
@@ -88,9 +87,10 @@ This document consolidates the full GCF clustering analysis in a single
 place: exploratory characterization (BGC/GCF inventory, product-class
 composition, size distribution, richness by clinical group) together with
 the statistically rigorous hypothesis-testing procedure for GCF–phenotype
-association. It replaces the earlier two-document split (`gcf_results.Rmd`
-+ `gcf_results_full.Rmd`); `gcf_results.Rmd` is retained only as a pointer
-to this file.
+association. It replaces the earlier two-document split
+(`gcf_results.Rmd` + `gcf_results_full.Rmd`) from the R Markdown era; the
+redirect stub has since been retired outright now that this Quarto document
+is the sole entry point.
 
 An earlier version of the statistical-testing section (now retired)
 selected the 20 GCFs with the **largest prevalence difference** between
@@ -275,22 +275,22 @@ richness_tool |>
   theme(legend.position = "none")
 ```
 
-The tool-stratified pattern reveals that the signal of higher BGC richness in 
-cancer genomes is not uniform across prediction methods. For antiSMASH, the 
-distributions for Cancer and Non-cancer samples are virtually identical (W = 
-33898.5, p_adj = 0.387, ns)—an expected outcome, given that this tool typically 
-detects only 1–2 BGCs per genome (predominantly the universal terpene-precursor 
-cluster), leaving little room for inter-group variation. In contrast, deepBGC 
-shows a robust and highly significant difference (W = 37563.0, p_adj = 2.61e-05, 
-***), with cancer genomes exhibiting higher median values and greater dispersion 
-in the number of BGCs per genome. This indicates that the overall signal of 
-increased richness in cancer is largely driven by deepBGC and does not represent 
-a consistent, generalized trend across all mining tools. GECCO could not be 
-evaluated due to the extremely low frequency of predictions in this dataset. 
-This result is methodologically significant and it underscores the need for 
+The tool-stratified pattern reveals that the signal of higher BGC richness in
+cancer genomes is not uniform across prediction methods. For antiSMASH, the
+distributions for Cancer and Non-cancer samples are virtually identical (W =
+33898.5, p_adj = 0.387, ns)—an expected outcome, given that this tool typically
+detects only 1–2 BGCs per genome (predominantly the universal terpene-precursor
+cluster), leaving little room for inter-group variation. In contrast, deepBGC
+shows a robust and highly significant difference (W = 37563.0, p_adj = 2.61e-05,
+***), with cancer genomes exhibiting higher median values and greater dispersion
+in the number of BGCs per genome. This indicates that the overall signal of
+increased richness in cancer is largely driven by deepBGC and does not represent
+a consistent, generalized trend across all mining tools. GECCO could not be
+evaluated due to the extremely low frequency of predictions in this dataset.
+This result is methodologically significant and it underscores the need for
 caution when interpreting this finding as a biological pattern.
 
-````{r bgc-richness-by-tool-tests, cache=TRUE}
+```{r bgc-richness-by-tool-tests}
 tools <- unique(gcf_meta$Prediction_tool)
 
 map_dfr(tools, function(tool) {
@@ -320,7 +320,7 @@ map_dfr(tools, function(tool) {
          p_adj_BH = formatC(p_adj_BH, format = "e", digits = 2)) |>
   knitr::kable(col.names = c("Tool", "W", "p", "p_adj (BH)", "Sig.")) |>
   kable_styling(full_width = FALSE)
-````
+```
 
 ## GCF richness per genome
 
@@ -359,7 +359,7 @@ assigned to that family. Significance was assessed using Fisher's exact test.
 P-values were adjusted for multiple testing using the Benjamini–Hochberg (FDR)
 procedure **across the entire qualifying set**, not a pre-selected subset.
 
-```{r gcf-prevalence-full, cache=TRUE}
+```{r gcf-prevalence-full}
 MIN_GENOMES_TOTAL <- 3
 
 n_cancer    <- sum(meta$group == "Cancer",     na.rm = TRUE)
@@ -563,7 +563,7 @@ As in the prevalence analysis above, adjustment analyses (CMH and multivariable
 logistic regression) were run over **all qualifying GCFs** (≥ 3 carrier
 genomes), and Benjamini–Hochberg correction was applied across that full set.
 
-```{r gcf_logistic_full, cache=TRUE}
+```{r gcf_logistic_full}
 # ---------------------------------------------------------------------------
 # Covariates: continent, age, total BGC richness per genome (confounder control)
 # ---------------------------------------------------------------------------
@@ -799,7 +799,7 @@ meta |>
 ## Age, BGC richness, and clinical phenotype
 
 BGC richness differs modestly but significantly by phenotype (see above), and
-the cancer cohort skews older than the non-cancer cohort (Age distribution 
+the cancer cohort skews older than the non-cancer cohort (Age distribution
 section above). Before attributing the observed
 richness difference to phenotype alone, it is worth checking whether age is a
 confounder or effect-modifier of that relationship. Continent is not examined
@@ -873,45 +873,45 @@ summary_main |>
   kable_styling(full_width = FALSE, font_size = 11)
 ```
 
-Age was tested as a covariate of BGC richness both marginally and via an age 
-× phenotype interaction (quasi-Poisson GLM, to account for overdispersion in 
-the count outcome). The main-effects model estimates an incidence rate ratio 
-(IRR) of `r round(summary_main$estimate[summary_main$term == "groupCancer"], 2)` 
+Age was tested as a covariate of BGC richness both marginally and via an age
+× phenotype interaction (quasi-Poisson GLM, to account for overdispersion in
+the count outcome). The main-effects model estimates an incidence rate ratio
+(IRR) of `r round(summary_main$estimate[summary_main$term == "groupCancer"], 2)`
 for Cancer vs Non-cancer (95% CI: `r round(summary_main$conf.low[summary_main$term == "groupCancer"], 2)`
--`r round(summary_main$conf.high[summary_main$term == "groupCancer"], 2)`), 
-holding age constant, and an IRR of `r round(summary_main$estimate[summary_main$term == "Age"], 3)` 
+-`r round(summary_main$conf.high[summary_main$term == "groupCancer"], 2)`),
+holding age constant, and an IRR of `r round(summary_main$estimate[summary_main$term == "Age"], 3)`
 per additional year of age (95% CI: `r round(summary_main$conf.low[summary_main$term == "Age"], 3)`
--`r round(summary_main$conf.high[summary_main$term == "Age"], 3)`, p = 
-`r formatC(summary_main$p.value[summary_main$term == "Age"], format = "e", digits = 2)`). 
-A likelihood-ratio test comparing the interaction model to the main-effects 
-model yielded p = `r formatC(interaction_p, format = "e", digits = 2)`, 
+-`r round(summary_main$conf.high[summary_main$term == "Age"], 3)`, p =
+`r formatC(summary_main$p.value[summary_main$term == "Age"], format = "e", digits = 2)`).
+A likelihood-ratio test comparing the interaction model to the main-effects
+model yielded p = `r formatC(interaction_p, format = "e", digits = 2)`,
 indicating `r if (interaction_p < 0.05) "that the relationship between age and BGC richness differs significantly between clinical groups" else "no evidence that the relationship between age and BGC richness differs between clinical groups"`.
 
-Taken together, age and clinical phenotype appear to act as independent, 
-additive effects on BGC richness rather than interacting ones: the 
-phenotype effect (IRR = `r round(summary_main$estimate[summary_main$term == "groupCancer"], 2)`) 
-persists essentially unchanged after adjusting for age, and its magnitude 
-is comparable to that reported for the unadjusted comparison earlier in 
-this document, arguing against age acting as a strong confounder of the 
-observed BGC richness difference. That said, the phenotype effect remains 
-modest — its 95% CI lower bound 
-(`r round(summary_main$conf.low[summary_main$term == "groupCancer"], 2)`) 
-sits essentially at the null — so "surviving adjustment" should not be read 
-as "robust," but as consistent with the small-but-real pattern documented 
+Taken together, age and clinical phenotype appear to act as independent,
+additive effects on BGC richness rather than interacting ones: the
+phenotype effect (IRR = `r round(summary_main$estimate[summary_main$term == "groupCancer"], 2)`)
+persists essentially unchanged after adjusting for age, and its magnitude
+is comparable to that reported for the unadjusted comparison earlier in
+this document, arguing against age acting as a strong confounder of the
+observed BGC richness difference. That said, the phenotype effect remains
+modest — its 95% CI lower bound
+(`r round(summary_main$conf.low[summary_main$term == "groupCancer"], 2)`)
+sits essentially at the null — so "surviving adjustment" should not be read
+as "robust," but as consistent with the small-but-real pattern documented
 throughout this report.
 
-The Spearman correlations between age and BGC richness, computed separately 
-within each group, add a point of nuance: the overall correlation is weak 
-but significant (ρ = `r round(cor_overall$estimate, 2)`, p = 
-`r formatC(cor_overall$p.value, format = "e", digits = 2)`), the Non-cancer 
-subgroup mirrors this pattern (ρ = `r round(cor_noncancer$estimate, 2)`, p = 
-`r formatC(cor_noncancer$p.value, format = "e", digits = 2)`), but the 
-Cancer subgroup alone shows no significant correlation (ρ = 
-`r round(cor_cancer$estimate, 2)`, p = 
-`r formatC(cor_cancer$p.value, format = "e", digits = 2)`). This is not 
-strictly inconsistent with the non-significant interaction term above — the 
-per-group Spearman test has less power than the GLM, which pools all 
-observations under a common slope assumption — but it is a reminder that 
-the age effect within the Cancer group specifically is not well 
-supported by a simple bivariate test, even though the pooled model detects 
+The Spearman correlations between age and BGC richness, computed separately
+within each group, add a point of nuance: the overall correlation is weak
+but significant (ρ = `r round(cor_overall$estimate, 2)`, p =
+`r formatC(cor_overall$p.value, format = "e", digits = 2)`), the Non-cancer
+subgroup mirrors this pattern (ρ = `r round(cor_noncancer$estimate, 2)`, p =
+`r formatC(cor_noncancer$p.value, format = "e", digits = 2)`), but the
+Cancer subgroup alone shows no significant correlation (ρ =
+`r round(cor_cancer$estimate, 2)`, p =
+`r formatC(cor_cancer$p.value, format = "e", digits = 2)`). This is not
+strictly inconsistent with the non-significant interaction term above — the
+per-group Spearman test has less power than the GLM, which pools all
+observations under a common slope assumption — but it is a reminder that
+the age effect within the Cancer group specifically is not well
+supported by a simple bivariate test, even though the pooled model detects
 no evidence that the age–richness slope actually differs between groups.

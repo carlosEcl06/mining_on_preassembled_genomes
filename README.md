@@ -43,7 +43,7 @@ metagenome-assembled *H. pylori* genomes.
 
    See `analysis/scripts/gcf_clustering/run_clustering.sh` for the full
    orchestration and `requirements.txt` for dependencies.
-4. **Statistical analysis and reporting** (`analysis/R/RMarkdown/`) — R Markdown
+4. **Statistical analysis and reporting** (`analysis/R/RMarkdown/`) — Quarto
    notebooks characterizing the BGC/GCF inventory and testing GCF–phenotype
    association (Fisher's exact test, Cochran–Mantel–Haenszel, and multivariable
    logistic regression, all corrected for multiple testing across every
@@ -58,7 +58,7 @@ analysis/
 ├── scripts/gcf_clustering/       GCF clustering pipeline (Python) + results/
 ├── R/
 │   ├── copied_from_funcscan_results/   comBGC summary table + MultiQC report
-│   └── RMarkdown/                      analysis notebooks (.Rmd) and rendered output
+│   └── RMarkdown/                      analysis notebooks (.qmd, Quarto) and rendered output
 ```
 
 Large intermediate files (genome FASTAs, the original MultiQC/Excel exports,
@@ -76,7 +76,8 @@ cd analysis/scripts/gcf_clustering
 bash setup_env.sh && conda activate gcf_clustering
 bash run_clustering.sh
 
-# 3. Statistical analysis: knit analysis/R/RMarkdown/gcf_results_full.Rmd
+# 3. Statistical analysis (requires Quarto CLI)
+cd analysis/R/RMarkdown && quarto render
 ```
 
 ## Status
