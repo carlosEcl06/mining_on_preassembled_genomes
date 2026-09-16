@@ -16,7 +16,11 @@
 # Setup:
 #   - List jobs to watch in tracked_jobs.tsv (job_id<TAB>label), one per line,
 #     git-tracked — edit it as new PBS jobs are submitted during the pipeline.
-#   - .state.json (gitignored) holds last-seen status per job_id.
+#   - List files to watch for existence in watched_files.tsv (path<TAB>label) —
+#     for Nextflow-orchestrated runs, where individual PBS job IDs are
+#     dispatched dynamically and can't be enumerated in advance; watching the
+#     expected final output file appear is a cleaner completion signal.
+#   - .state.json (gitignored) holds last-seen status per job_id/file.
 #   - .monitor.log (gitignored) is a running log for debugging.
 #
 # Scheduled via Windows Task Scheduler task "LabServerPBSMonitor" (created
@@ -25,6 +29,7 @@ set -uo pipefail   # NOT -e: a single job's ssh/qstat hiccup must not abort the 
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TRACKED_JOBS="${SCRIPT_DIR}/tracked_jobs.tsv"
+WATCHED_FILES="${SCRIPT_DIR}/watched_files.tsv"
 STATE_FILE="${SCRIPT_DIR}/.state.json"
 LOG_FILE="${SCRIPT_DIR}/.monitor.log"
 
@@ -37,8 +42,8 @@ log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >> "${LOG_FILE}"; }
 
 log "--- check started ---"
 
-if [[ ! -s "${TRACKED_JOBS}" ]]; then
-    log "No tracked jobs yet (${TRACKED_JOBS} empty/missing); nothing to check."
+if [[ ! -s "${TRACKED_JOBS}" && ! -s "${WATCHED_FILES}" ]]; then
+    log "Nothing tracked yet (${TRACKED_JOBS}, ${WATCHED_FILES} both empty/missing); nothing to check."
     exit 0
 fi
 
@@ -46,6 +51,32 @@ fi
 
 CHANGES=""
 
+update_state() {
+    # $1=key $2=value — merges into STATE_FILE (shared by both job-id and file watchers)
+    python3 -c "
+import json
+try:
+    d = json.load(open('${STATE_FILE}'))
+except Exception:
+    d = {}
+d['$1'] = '''$2'''
+json.dump(d, open('${STATE_FILE}', 'w'))
+"
+}
+
+get_prev_state() {
+    # $1=key
+    python3 -c "
+import json
+try:
+    d = json.load(open('${STATE_FILE}'))
+except Exception:
+    d = {}
+print(d.get('$1', ''))
+" 2>/dev/null
+}
+
+if [[ -s "${TRACKED_JOBS}" ]]; then
 while IFS=$'\t' read -r job_id label; do
     [[ -z "${job_id}" || "${job_id}" == \#* ]] && continue
 
@@ -55,30 +86,37 @@ while IFS=$'\t' read -r job_id label; do
         current="GONE"   # left the queue entirely: finished+purged, or never existed
     fi
 
-    prev=$(python3 -c "
-import json
-try:
-    d = json.load(open('${STATE_FILE}'))
-except Exception:
-    d = {}
-print(d.get('${job_id}', ''))
-" 2>/dev/null)
+    prev=$(get_prev_state "job:${job_id}")
 
     if [[ "${current}" != "${prev}" ]]; then
         CHANGES="${CHANGES}${label} (${job_id}): ${prev:-<none>} -> ${current}\n"
         log "CHANGE ${job_id} (${label}): '${prev:-<none>}' -> '${current}'"
     fi
 
-    python3 -c "
-import json
-try:
-    d = json.load(open('${STATE_FILE}'))
-except Exception:
-    d = {}
-d['${job_id}'] = '''${current}'''
-json.dump(d, open('${STATE_FILE}', 'w'))
-"
+    update_state "job:${job_id}" "${current}"
 done < "${TRACKED_JOBS}"
+fi
+
+if [[ -s "${WATCHED_FILES}" ]]; then
+while IFS=$'\t' read -r remote_path label; do
+    [[ -z "${remote_path}" || "${remote_path}" == \#* ]] && continue
+
+    if ssh "${SSH_OPTS[@]}" "${SSH_HOST}" "test -f '${remote_path}'" 2>/dev/null; then
+        current="EXISTS"
+    else
+        current="MISSING"
+    fi
+
+    prev=$(get_prev_state "file:${remote_path}")
+
+    if [[ "${current}" != "${prev}" ]]; then
+        CHANGES="${CHANGES}${label} (${remote_path}): ${prev:-<none>} -> ${current}\n"
+        log "CHANGE ${remote_path} (${label}): '${prev:-<none>}' -> '${current}'"
+    fi
+
+    update_state "file:${remote_path}" "${current}"
+done < "${WATCHED_FILES}"
+fi
 
 if [[ -n "${CHANGES}" ]]; then
     log "Changes detected, invoking claude -p for notification:"
