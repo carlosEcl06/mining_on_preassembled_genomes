@@ -22,3 +22,6 @@ analysis/BSB_short_paper/
 # analysis/phylogenetics pipeline (generated/large data, regenerable)
 analysis/phylogenetics/rawdata/
 analysis/phylogenetics/results/
+analysis/phylogenetics/nextflow/work/
+analysis/phylogenetics/nextflow/.nextflow/
+analysis/phylogenetics/nextflow/.nextflow.log*
