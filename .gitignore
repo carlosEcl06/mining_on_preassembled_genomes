@@ -18,3 +18,7 @@ analysis/scripts/results/
 
 analysis/SNNB/
 analysis/BSB_short_paper/
+
+# analysis/phylogenetics pipeline (generated/large data, regenerable)
+analysis/phylogenetics/rawdata/
+analysis/phylogenetics/results/
