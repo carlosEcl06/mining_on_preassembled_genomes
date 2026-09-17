@@ -16,7 +16,17 @@
 // variant-effect annotation for this pipeline anyway (only snps.vcf /
 // snps.aligned.fa feed snippy-core) — a plain FASTA has no gene models, so
 // Snippy skips the SnpEff build step entirely.
-params.reference   = "${projectDir}/../rawdata/reference/26695.fasta"
+// Reference switched from CP079087 (HpGP resequencing) to NC_000915 (the
+// classic Tomb et al. 1997 RefSeq assembly): GrafGen's ancestry marker panel
+// is coordinate-anchored to NC_000915, confirmed directly against its own
+// shipped example VCF (CHROM=NC_000915) and reference dataframe -- running
+// GrafGen against a CP079087-called VCF produced a degenerate, biologically
+// implausible result (all 552 genomes collapsed to one Refpop, E_percent=0
+// uniformly) because the two accessions are different sequencing efforts of
+// strain 26695 with non-corresponding coordinates, not the same numbering.
+// One reference is used for both the tree and the ancestry panel, so this
+// swap re-runs the whole fan-out rather than maintaining two alignments.
+params.reference   = "${projectDir}/../rawdata/reference/NC_000915.fasta"
 params.seqkit_dir  = "/data2/projects/LGMB-009/NGS/analysis/funcscan/results/bgc/seqkit"
 params.results_dir = "${projectDir}/../results/snippy"
 params.exclude     = ['GCA_024409305.1', 'GCA_015904695.1']  // <1.4 Mb, see plan
