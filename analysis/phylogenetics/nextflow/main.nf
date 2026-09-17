@@ -21,6 +21,14 @@ params.seqkit_dir  = "/data2/projects/LGMB-009/NGS/analysis/funcscan/results/bgc
 params.results_dir = "${projectDir}/../results/snippy"
 params.exclude     = ['GCA_024409305.1', 'GCA_015904695.1']  // <1.4 Mb, see plan
 params.snippy_sif  = 'docker://quay.io/biocontainers/snippy:4.6.0--hdfd78af_2'
+// pne5 is missing /usr/bin/apptainer entirely (confirmed directly: file does
+// not exist there, on all other 5 free nodes it does) — a real gap in that
+// node's setup, not fixable without root. PBS here doesn't support host!=
+// exclusion syntax ("Illegal attribute or resource value"), so instead every
+// process explicitly round-robins across the 5 known-good nodes via
+// clusterOptions (validated on a standalone 10-task test: all 10 landed on
+// pne3/4/6/7/10, never pne5, before trusting this on the real 552-genome run).
+params.good_nodes  = ['pne3', 'pne4', 'pne6', 'pne7', 'pne10']
 // For smoke-testing on a handful of genomes, override --seqkit_dir to point
 // at a directory with just a few symlinked *_long.fasta files, rather than
 // slicing the list here — every attempt at in-workflow list slicing
@@ -30,9 +38,7 @@ params.snippy_sif  = 'docker://quay.io/biocontainers/snippy:4.6.0--hdfd78af_2'
 process SNIPPY_CTGS {
     tag "${sample_id}"
     executor 'pbs'
-    queue 'workq'
-    cpus 2
-    memory '4 GB'
+    clusterOptions { "-q workq -l select=1:ncpus=2:mem=4gb:host=${params.good_nodes[task.index % params.good_nodes.size()]}" }
     time '30m'
     container params.snippy_sif
     errorStrategy 'retry'  // dynamic closure form crashed while handling an input-staging-time
@@ -50,7 +56,7 @@ process SNIPPY_CTGS {
 
     script:
     """
-    snippy --ctgs ${contigs} --ref ${reference} --outdir out --cpus ${task.cpus} --force
+    snippy --ctgs ${contigs} --ref ${reference} --outdir out --cpus 2 --force
     cp out/snps.vcf ${sample_id}.vcf
     cp out/snps.aligned.fa ${sample_id}.aligned.fa
     cp out/snps.log ${sample_id}.log
@@ -60,9 +66,7 @@ process SNIPPY_CTGS {
 
 process SNIPPY_CORE {
     executor 'pbs'
-    queue 'workq'
-    cpus 4
-    memory '8 GB'
+    clusterOptions "-q workq -l select=1:ncpus=4:mem=8gb:host=${params.good_nodes[0]}"  // single job, pin to the first good node explicitly
     time '2h'
     container params.snippy_sif
     publishDir "${params.results_dir}/core", mode: 'copy'
