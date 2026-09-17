@@ -25,3 +25,11 @@ analysis/phylogenetics/results/
 analysis/phylogenetics/nextflow/work/
 analysis/phylogenetics/nextflow/.nextflow/
 analysis/phylogenetics/nextflow/.nextflow.log*
+analysis/phylogenetics/nextflow/*.log
+analysis/phylogenetics/nextflow/trace-*.txt
+# one-off diagnostic PBS scripts/output run directly against the server during
+# development (e.g. checking a container's --help output) -- not part of the
+# reusable pipeline, regenerable if ever needed again
+analysis/phylogenetics/*.out
+analysis/phylogenetics/*.err
+analysis/phylogenetics/*.pbs
