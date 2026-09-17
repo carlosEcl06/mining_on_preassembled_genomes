@@ -74,6 +74,14 @@ print(f"Pairs with <=5 SNP core-genome distance: {len(near_dup_pairs)}")
 for a, b, d in sorted(near_dup_pairs, key=lambda x: x[2])[:30]:
     print(f"  {a}  <->  {b}   dist={d}")
 
-pd.DataFrame(near_dup_pairs, columns=["sample_a", "sample_b", "snp_distance"]).to_csv(
-    f"{BASE}/../../grafgen/near_duplicates.tsv", sep="\t", index=False
-)
+near_dup_df = pd.DataFrame(near_dup_pairs, columns=["sample_a", "sample_b", "snp_distance"])
+meta_cols = ["Genome_ID", "Continent", "Phenotype", "Age", "Sex"]
+meta_slim = meta[meta_cols].copy()
+meta_slim["Phenotype"] = meta_slim["Phenotype"].str.strip()
+near_dup_df = near_dup_df.merge(
+    meta_slim.add_suffix("_a"), left_on="sample_a", right_on="Genome_ID_a", how="left"
+).drop(columns=["Genome_ID_a"])
+near_dup_df = near_dup_df.merge(
+    meta_slim.add_suffix("_b"), left_on="sample_b", right_on="Genome_ID_b", how="left"
+).drop(columns=["Genome_ID_b"])
+near_dup_df.to_csv(f"{BASE}/../../grafgen/near_duplicates.tsv", sep="\t", index=False)
