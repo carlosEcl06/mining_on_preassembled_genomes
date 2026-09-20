@@ -66,7 +66,7 @@ def main():
             })
 
     with open(f"{BASE}/dedup_cohort_exclusions.tsv", "w", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=["sample_id", "cluster_size", "callable_fraction", "role"])
+        w = csv.DictWriter(f, fieldnames=["sample_id", "cluster_size", "callable_fraction", "role"], delimiter="\t", lineterminator="\n")
         w.writeheader()
         w.writerows(sorted(rows, key=lambda r: -r["cluster_size"]))
 
