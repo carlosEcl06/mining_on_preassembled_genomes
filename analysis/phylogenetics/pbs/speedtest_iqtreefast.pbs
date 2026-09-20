@@ -1,0 +1,20 @@
+#!/bin/bash
+# Speed test: pilot-B alignment (N=175) through Gubbins with a faster tree builder (iqtree-fast),
+# to compare against the 21h57m reference run (--tree-builder iqtree). Keeps intermediates
+# (--no-cleanup) so per-iteration trees survive. Same 5-iteration cap as the pilots.
+#PBS -N gb_speed_iqtreefast
+#PBS -q workq
+#PBS -l select=1:ncpus=24:mem=60gb:host=pne4
+#PBS -l walltime=48:00:00
+#PBS -o /data2/projects/LGMB-009/NGS/analysis/phylogenetics/results/gubbins/speedtest_iqtreefast.out
+#PBS -e /data2/projects/LGMB-009/NGS/analysis/phylogenetics/results/gubbins/speedtest_iqtreefast.err
+
+set -x
+W=/data2/projects/LGMB-009/NGS/analysis/phylogenetics
+mkdir -p $W/results/gubbins/speedtest_iqtreefast
+cd $W/results/gubbins/speedtest_iqtreefast
+cp $W/rawdata/gubbins_pilots/pilot_b_n175.aln .
+echo "START: $(date)"
+apptainer exec $W/nextflow/work/singularity/gubbins.sif \
+  run_gubbins.py --threads 24 --tree-builder iqtree-fast --no-cleanup --iterations 5 --prefix speed_iqtreefast pilot_b_n175.aln
+echo "END: $(date)"
