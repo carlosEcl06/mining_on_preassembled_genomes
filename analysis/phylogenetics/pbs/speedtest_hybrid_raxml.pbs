@@ -1,0 +1,24 @@
+#!/bin/bash
+# Speed test 3: pilot-B alignment (N=175) through Gubbins' real `--tree-builder hybrid` (gubbins 3.3.5:
+# FastTree for the first tree, RAxML for iterations 2+). Compared against the 21h57m all-iqtree reference (pilot B).
+# Replaces speedtest_hybrid.pbs (fasttree -> iqtree), which was NOT the manual's hybrid and crashed in IQ-TREE at iteration 3:
+# Gubbins passes the previous iteration's tree (branch lengths in SNP units, ~1e3) to `iqtree -t`, IQ-TREE handed it back
+# un-rescaled, and Gubbins multiplied by the alignment length again (sum of branch lengths 1e6 -> 1e11 -> ...), then underflow.
+# Keeps intermediates (--no-cleanup); same 5-iteration cap. set -e so a crash inside the container fails the job.
+#PBS -N gb_speed_hybrid_raxml
+#PBS -q workq
+#PBS -l select=1:ncpus=24:mem=60gb:host=pne4
+#PBS -l walltime=24:00:00
+#PBS -o /data2/projects/LGMB-009/NGS/analysis/phylogenetics/results/gubbins/speedtest_hybrid_raxml.out
+#PBS -e /data2/projects/LGMB-009/NGS/analysis/phylogenetics/results/gubbins/speedtest_hybrid_raxml.err
+
+set -ex
+W=/data2/projects/LGMB-009/NGS/analysis/phylogenetics
+mkdir -p $W/results/gubbins/speedtest_hybrid_raxml
+cd $W/results/gubbins/speedtest_hybrid_raxml
+cp $W/rawdata/gubbins_pilots/pilot_b_n175.aln .
+echo "START: $(date)"
+apptainer exec $W/nextflow/work/singularity/gubbins.sif \
+  run_gubbins.py --threads 24 --tree-builder hybrid --no-cleanup --iterations 5 --prefix speed_hybrid_raxml pilot_b_n175.aln
+test -s speed_hybrid_raxml.final_tree.tre
+echo "END: $(date)"

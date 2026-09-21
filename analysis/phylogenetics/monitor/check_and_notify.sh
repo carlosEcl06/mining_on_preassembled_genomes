@@ -7,11 +7,9 @@
 # needed. See ../../../.claude adjacent notes / the project plan for the full
 # design rationale (cloud-routine SSH was ruled out — see plan history).
 #
-# Design: plain bash does the actual SSH/qstat work (deterministic, no LLM
-# judgment needed, so no permission risk in an unattended run). A tiny,
-# narrowly-scoped `claude -p` call — allowed ONLY the PushNotification tool,
-# nothing else — fires exactly when a tracked job's state changed, and stays
-# silent otherwise. Routine checks with nothing to report cost zero LLM usage.
+# Design: plain bash does the SSH/qstat work and, when a tracked job or file
+# changed state, posts a plain-text message to a private ntfy.sh topic (phone
+# push). Silent otherwise; no LLM involved.
 #
 # Setup:
 #   - List jobs to watch in tracked_jobs.tsv (job_id<TAB>label), one per line,
@@ -119,13 +117,24 @@ done < "${WATCHED_FILES}"
 fi
 
 if [[ -n "${CHANGES}" ]]; then
-    log "Changes detected, invoking claude -p for notification:"
+    log "Changes detected, notifying via ntfy:"
     log "${CHANGES}"
-    claude -p "One or more tracked PBS jobs on the lab server changed state since the last check. Send exactly one PushNotification (status: proactive) summarizing this — under 200 characters, one line, no markdown, lead with what changed and what (if anything) needs a decision. Changes:
-${CHANGES}" \
-        --model claude-haiku-4-5-20251001 \
-        --allowedTools PushNotification \
-        >> "${LOG_FILE}" 2>&1
+    # Phone push via ntfy.sh. The private topic name lives in .ntfy_topic (gitignored, chmod 600); anyone who
+    # knows it can read/post, so never commit it. (The old `claude -p` + PushNotification path could not reach the
+    # phone: that tool only pushes when a Remote Control session is connected, and it skips when a terminal is active.)
+    NTFY_TOPIC_FILE="${SCRIPT_DIR}/.ntfy_topic"
+    if [[ -s "${NTFY_TOPIC_FILE}" ]]; then
+        NTFY_TOPIC="$(tr -d '[:space:]' < "${NTFY_TOPIC_FILE}")"
+        if curl -sS -m 20 --fail -o /dev/null \
+            -H "Title: Lab server PBS" -H "Tags: bar_chart" \
+            -d "$(printf '%b' "${CHANGES}")" "https://ntfy.sh/${NTFY_TOPIC}" >> "${LOG_FILE}" 2>&1; then
+            log "ntfy push sent."
+        else
+            log "ntfy push FAILED (see curl error above)."
+        fi
+    else
+        log "No ${NTFY_TOPIC_FILE}; cannot push."
+    fi
 else
     log "No changes."
 fi
