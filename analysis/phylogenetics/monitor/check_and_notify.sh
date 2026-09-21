@@ -80,7 +80,7 @@ if [[ -s "${TRACKED_JOBS}" ]]; then
 while IFS=$'\t' read -r job_id label; do
     [[ -z "${job_id}" || "${job_id}" == \#* ]] && continue
 
-    current=$(ssh "${SSH_OPTS[@]}" "${SSH_HOST}" "qstat -f ${job_id} 2>&1" 2>/dev/null \
+    current=$(ssh "${SSH_OPTS[@]}" "${SSH_HOST}" "qstat -xf ${job_id} 2>&1" 2>/dev/null \
         | grep -E "job_state|Exit_status" | tr -d ' \t' | tr '\n' ';')
     if [[ -z "${current}" ]]; then
         current="GONE"   # left the queue entirely: finished+purged, or never existed

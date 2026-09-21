@@ -1,0 +1,22 @@
+#!/bin/bash
+# Speed test 2: pilot-B alignment (N=175) through Gubbins in the manual-recommended hybrid mode:
+# fasttree for the first (slowest, all-SNP) tree, iqtree for iterations 2+. Compared against the
+# 21h57m all-iqtree reference (pilot B). Keeps intermediates (--no-cleanup); same 5-iteration cap.
+# set -e so a crash inside the container fails the job (speedtest_iqtreefast crashed but PBS said Exit_status=0).
+#PBS -N gb_speed_hybrid
+#PBS -q workq
+#PBS -l select=1:ncpus=24:mem=60gb:host=pne4
+#PBS -l walltime=24:00:00
+#PBS -o /data2/projects/LGMB-009/NGS/analysis/phylogenetics/results/gubbins/speedtest_hybrid.out
+#PBS -e /data2/projects/LGMB-009/NGS/analysis/phylogenetics/results/gubbins/speedtest_hybrid.err
+
+set -ex
+W=/data2/projects/LGMB-009/NGS/analysis/phylogenetics
+mkdir -p $W/results/gubbins/speedtest_hybrid
+cd $W/results/gubbins/speedtest_hybrid
+cp $W/rawdata/gubbins_pilots/pilot_b_n175.aln .
+echo "START: $(date)"
+apptainer exec $W/nextflow/work/singularity/gubbins.sif \
+  run_gubbins.py --threads 24 --first-tree-builder fasttree --tree-builder iqtree --no-cleanup --iterations 5 --prefix speed_hybrid pilot_b_n175.aln
+test -s speed_hybrid.final_tree.tre
+echo "END: $(date)"
