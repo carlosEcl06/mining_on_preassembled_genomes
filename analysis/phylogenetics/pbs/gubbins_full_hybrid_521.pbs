@@ -1,0 +1,30 @@
+#!/bin/bash
+# The full Gubbins run: 521-genome deduplicated cohort (results/snippy/core521/core521.aln,
+# 109,480-site core, 522 sequences incl. reference), --tree-builder hybrid (FastTree first
+# tree, RAxML afterwards) — the builder chosen from the speed test on pilot B (job 3126:
+# r=0.993 vs the reference, closest recombination match of everything tried). See the plan,
+# "Speed test RESOLVED and full-Gubbins builder decided" (2026-09-21) for the full rationale.
+# Iteration cap left at Gubbins' own default (5), matching every prior run (pilots, speed
+# tests) — no basis to deviate for this run. --no-cleanup keeps per-iteration trees, needed
+# to check convergence/behaviour at this scale (impossible to check retrospectively otherwise).
+# Estimated 30-35h (N^1.66 extrapolation from the N=175 hybrid speed test, 5h17m -> unverified
+# for this builder, treat as good to ~2x); walltime sized generously at 96h.
+# set -e + final-tree existence check: a PBS job here can report Exit_status=0 on an internal
+# crash (see job 3124's speed-test log) — never trust the exit code alone.
+#PBS -N gubbins_full_hybrid_521
+#PBS -q workq
+#PBS -l select=1:ncpus=24:mem=60gb:host=pne3
+#PBS -l walltime=96:00:00
+#PBS -o /data2/projects/LGMB-009/NGS/analysis/phylogenetics/results/gubbins/full_hybrid_521.out
+#PBS -e /data2/projects/LGMB-009/NGS/analysis/phylogenetics/results/gubbins/full_hybrid_521.err
+
+set -ex
+W=/data2/projects/LGMB-009/NGS/analysis/phylogenetics
+mkdir -p $W/results/gubbins/full_hybrid_521
+cd $W/results/gubbins/full_hybrid_521
+cp $W/results/snippy/core521/core521.aln .
+echo "START: $(date)"
+apptainer exec $W/nextflow/work/singularity/gubbins.sif \
+  run_gubbins.py --threads 24 --tree-builder hybrid --no-cleanup --prefix full_hybrid_521 core521.aln
+test -s full_hybrid_521.final_tree.tre
+echo "END: $(date)"
