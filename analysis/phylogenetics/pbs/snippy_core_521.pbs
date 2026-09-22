@@ -1,0 +1,52 @@
+#!/bin/bash
+# Re-run snippy-core on the 521-genome deduplicated cohort (552 minus the 31 near-duplicate
+# exclusions in results/grafgen/dedup_cohort_exclusions.tsv), per the user's decision
+# 2026-09-21 (re-run, not a subset of the existing 552-genome core.aln) — see the plan,
+# "Speed test RESOLVED and full-Gubbins builder decided". Per-genome Snippy outputs already
+# exist (results/snippy/<sample_id>.{vcf,aligned.fa}); this only re-runs the core-alignment
+# step, so it's a single lightweight job, not a per-genome fan-out (no Nextflow/screen needed).
+#
+# Three apptainer/cluster gotchas found and fixed while debugging this (none obvious from the
+# Nextflow pipeline, which sidesteps all three by staging everything inside its own work dir):
+#   1. apptainer here only auto-binds $HOME/$TMP/cwd, NOT arbitrary /data2 paths — an absolute
+#      --ref path or a symlink pointing outside the cwd is invisible inside the container and
+#      fails as "file not found"/-r false, not a permission error. Fix: cp everything snippy-core
+#      needs (reference + every sample's snps.vcf/snps.aligned.fa) into the job's own cwd first.
+#   2. snippy-core's guess_prefix() glob breaks if the sample dirs keep their ls -d trailing
+#      slash (matches the Nextflow script's own `sed 's:/$::'` workaround — copied here too).
+#   3. This host's login-shell env exports a `which` bash function (Lmod/module system) as
+#      BASH_FUNC_which%%, which apptainer passes into the container by default. snippy-core
+#      shells out to `which any2fasta` etc. via Perl qx(); the leaked function wraps BusyBox's
+#      which with GNU-only flags, which BusyBox rejects, so every dependency "can't be found"
+#      even though it's on PATH. Fix: run apptainer via `env -u 'BASH_FUNC_which%%'`.
+#PBS -N snippy_core_521
+#PBS -q workq
+#PBS -l select=1:ncpus=4:mem=8gb:host=pne3
+#PBS -l walltime=2:00:00
+#PBS -o /data2/projects/LGMB-009/NGS/analysis/phylogenetics/results/snippy/core521.out
+#PBS -e /data2/projects/LGMB-009/NGS/analysis/phylogenetics/results/snippy/core521.err
+
+set -ex
+W=/data2/projects/LGMB-009/NGS/analysis/phylogenetics
+S=$W/results/snippy
+IMG=$W/nextflow/work/singularity/quay.io-biocontainers-snippy-4.6.0--hdfd78af_2.img
+
+mkdir -p $S/core521
+cd $S/core521
+rm -rf samples; mkdir -p samples
+comm -23 <(ls $S/*.vcf | xargs -n1 basename | sed 's/\.vcf$//' | sort) <(sort $S/dedup_excluded_ids.txt) > kept_ids.txt
+test "$(wc -l < kept_ids.txt)" -eq 521
+while read -r sid; do
+    mkdir -p samples/$sid
+    cp $S/$sid.vcf samples/$sid/snps.vcf
+    cp $S/$sid.aligned.fa samples/$sid/snps.aligned.fa
+done < kept_ids.txt
+cp $W/rawdata/reference/NC_000915.fasta .
+
+echo "START: $(date)"
+env -u "BASH_FUNC_which%%" apptainer exec $IMG \
+  snippy-core --ref NC_000915.fasta $(ls -d samples/*/ | sed 's:/$::') --prefix core521
+test -s core521.aln
+grep -c '^>' core521.aln | grep -qx 522 || { echo "expected 521 samples + reference = 522 sequences"; exit 1; }
+rm -rf samples NC_000915.fasta  # per-sample copies were only scratch input for this step
+echo "END: $(date)"
