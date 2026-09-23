@@ -25,23 +25,24 @@
 # Cron does not fire while the laptop is suspended; on wake it runs the missed job immediately, hence the
 # network wait below.
 #
-# Heartbeat: at 08:00 and 14:00, send a fixed status push even when nothing changed (user request,
-# 2026-09-23 — reassurance that the monitor itself is alive, independent of whether there's news).
-# Every other hour stays silent-on-no-change as before, so this doesn't turn into hourly noise.
+# Heartbeat: at 08:00, 11:00, 14:00 and 17:00, send a fixed status push even when nothing changed
+# (user request, 2026-09-23, widened to 4 slots same day). Every other hour stays silent-on-no-
+# change as before, so this doesn't turn into hourly noise.
 #
 # Catch-up: Debian/Ubuntu cron only auto-replays a missed slot if the clock jump on wake is <= 3h
 # (see cron(8), "Special considerations..."); a longer sleep (e.g. overnight) is treated as a clock
 # correction and the missed slot is dropped entirely, no replay. And even a <=3h catch-up runs the
-# job at the ACTUAL current time, which may already be a later hour than 08/14 by the time it fires.
-# So the heartbeat can't just check "is the current hour 08 or 14" — it tracks, per calendar day, in
-# .state.json (`heartbeat:<date>:<hour>`), whether each slot has been sent yet; any check that runs
-# after a slot's hour has passed and finds it unsent (whatever the reason: cron's own >3h catch-up
-# gap, or this script's own network-wait delay) sends it then, once, however late.
+# job at the ACTUAL current time, which may already be a later hour than the target by the time it
+# fires. So the heartbeat can't just check "is the current hour one of the slot hours" — it tracks,
+# per calendar day, in .state.json (`heartbeat:<date>:<hour>`), whether each slot has been sent yet;
+# any check that runs after a slot's hour has passed and finds it unsent (whatever the reason:
+# cron's own >3h catch-up gap, or this script's own network-wait delay) sends it then, once,
+# however late.
 set -uo pipefail   # NOT -e: a single job's ssh/qstat hiccup must not abort the whole check
 
 HOUR="$(date +%H)"
 TODAY="$(date +%F)"
-HEARTBEAT_HOURS=("08" "14")
+HEARTBEAT_HOURS=("08" "11" "14" "17")
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TRACKED_JOBS="${SCRIPT_DIR}/tracked_jobs.tsv"
