@@ -24,7 +24,24 @@
 # Scheduled via user cron (`crontab -l`): hourly 08:00-22:00 (`0 8-22 * * *`) plus an @reboot run.
 # Cron does not fire while the laptop is suspended; on wake it runs the missed job immediately, hence the
 # network wait below.
+#
+# Heartbeat: at 08:00 and 14:00, send a fixed status push even when nothing changed (user request,
+# 2026-09-23 — reassurance that the monitor itself is alive, independent of whether there's news).
+# Every other hour stays silent-on-no-change as before, so this doesn't turn into hourly noise.
+#
+# Catch-up: Debian/Ubuntu cron only auto-replays a missed slot if the clock jump on wake is <= 3h
+# (see cron(8), "Special considerations..."); a longer sleep (e.g. overnight) is treated as a clock
+# correction and the missed slot is dropped entirely, no replay. And even a <=3h catch-up runs the
+# job at the ACTUAL current time, which may already be a later hour than 08/14 by the time it fires.
+# So the heartbeat can't just check "is the current hour 08 or 14" — it tracks, per calendar day, in
+# .state.json (`heartbeat:<date>:<hour>`), whether each slot has been sent yet; any check that runs
+# after a slot's hour has passed and finds it unsent (whatever the reason: cron's own >3h catch-up
+# gap, or this script's own network-wait delay) sends it then, once, however late.
 set -uo pipefail   # NOT -e: a single job's ssh/qstat hiccup must not abort the whole check
+
+HOUR="$(date +%H)"
+TODAY="$(date +%F)"
+HEARTBEAT_HOURS=("08" "14")
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TRACKED_JOBS="${SCRIPT_DIR}/tracked_jobs.tsv"
@@ -56,6 +73,7 @@ for _ in $(seq 1 24); do
 done
 
 CHANGES=""
+STATUS_LINES=""   # every tracked item's current state, regardless of change — used for the heartbeat body
 PENDING_KEYS=()   # state updates are applied only after the notification succeeded, so a failed push is retried next tick
 PENDING_VALS=()
 
@@ -84,6 +102,17 @@ print(d.get(sys.argv[1], ''))
 " "$1" 2>/dev/null
 }
 
+# Which heartbeat slots are due today (their hour has arrived or passed) and not yet sent today.
+CUR_HOUR_INT=$((10#${HOUR}))
+DUE_HEARTBEATS=()
+for h in "${HEARTBEAT_HOURS[@]}"; do
+    h_int=$((10#${h}))
+    if (( CUR_HOUR_INT >= h_int )); then
+        sent="$(get_prev_state "heartbeat:${TODAY}:${h}")"
+        [[ "${sent}" != "sent" ]] && DUE_HEARTBEATS+=("${h}")
+    fi
+done
+
 if [[ -s "${TRACKED_JOBS}" ]]; then
 while IFS=$'\t' read -r job_id label; do
     [[ -z "${job_id}" || "${job_id}" == \#* ]] && continue
@@ -104,6 +133,7 @@ while IFS=$'\t' read -r job_id label; do
         CHANGES="${CHANGES}${label} (${job_id}): ${prev:-<none>} -> ${current}\n"
         log "CHANGE ${job_id} (${label}): '${prev:-<none>}' -> '${current}'"
     fi
+    STATUS_LINES="${STATUS_LINES}${label}: ${current}\n"
 
     PENDING_KEYS+=("job:${job_id}"); PENDING_VALS+=("${current}")
 done < "${TRACKED_JOBS}"
@@ -129,6 +159,7 @@ while IFS=$'\t' read -r remote_path label; do
         CHANGES="${CHANGES}${label} (${remote_path}): ${prev:-<none>} -> ${current}\n"
         log "CHANGE ${remote_path} (${label}): '${prev:-<none>}' -> '${current}'"
     fi
+    STATUS_LINES="${STATUS_LINES}${label}: ${current}\n"
 
     PENDING_KEYS+=("file:${remote_path}"); PENDING_VALS+=("${current}")
 done < "${WATCHED_FILES}"
@@ -139,26 +170,55 @@ commit_state() {
     for i in "${!PENDING_KEYS[@]}"; do update_state "${PENDING_KEYS[$i]}" "${PENDING_VALS[$i]}"; done
 }
 
+# Phone push via ntfy.sh. The private topic name lives in .ntfy_topic (gitignored, chmod 600); anyone who
+# knows it can read/post, so never commit it. (The old `claude -p` + PushNotification path could not reach the
+# phone: that tool only pushes when a Remote Control session is connected, and it skips when a terminal is active.)
+push_ntfy() {
+    # $1=title $2=tags $3=body -> 0 on success, 1 on failure (caller decides whether that blocks commit_state)
+    local title="$1" tags="$2" body="$3"
+    local NTFY_TOPIC_FILE="${SCRIPT_DIR}/.ntfy_topic"
+    if [[ ! -s "${NTFY_TOPIC_FILE}" ]]; then
+        log "No ${NTFY_TOPIC_FILE}; cannot push."
+        return 1
+    fi
+    local NTFY_TOPIC; NTFY_TOPIC="$(tr -d '[:space:]' < "${NTFY_TOPIC_FILE}")"
+    if curl -sS -m 20 --retry 3 --retry-delay 5 --retry-all-errors --fail -o /dev/null \
+        -H "Title: ${title}" -H "Tags: ${tags}" \
+        -d "$(printf '%b' "${body}")" "https://ntfy.sh/${NTFY_TOPIC}" >> "${LOG_FILE}" 2>&1; then
+        log "ntfy push sent."
+        return 0
+    else
+        log "ntfy push FAILED (see curl error above)."
+        return 1
+    fi
+}
+
 if [[ -n "${CHANGES}" ]]; then
     log "Changes detected, notifying via ntfy:"
     log "${CHANGES}"
-    # Phone push via ntfy.sh. The private topic name lives in .ntfy_topic (gitignored, chmod 600); anyone who
-    # knows it can read/post, so never commit it. (The old `claude -p` + PushNotification path could not reach the
-    # phone: that tool only pushes when a Remote Control session is connected, and it skips when a terminal is active.)
-    NTFY_TOPIC_FILE="${SCRIPT_DIR}/.ntfy_topic"
-    if [[ -s "${NTFY_TOPIC_FILE}" ]]; then
-        NTFY_TOPIC="$(tr -d '[:space:]' < "${NTFY_TOPIC_FILE}")"
-        if curl -sS -m 20 --retry 3 --retry-delay 5 --retry-all-errors --fail -o /dev/null \
-            -H "Title: Lab server PBS" -H "Tags: bar_chart" \
-            -d "$(printf '%b' "${CHANGES}")" "https://ntfy.sh/${NTFY_TOPIC}" >> "${LOG_FILE}" 2>&1; then
-            log "ntfy push sent."
-            commit_state
-        else
-            log "ntfy push FAILED (see curl error above); state NOT saved, will retry next check."
-        fi
+    if push_ntfy "Lab server PBS" "bar_chart" "${CHANGES}"; then
+        commit_state
     else
-        log "No ${NTFY_TOPIC_FILE}; cannot push. State NOT saved."
+        log "State NOT saved, will retry next check."
     fi
+elif [[ ${#DUE_HEARTBEATS[@]} -gt 0 ]]; then
+    log "No changes, but heartbeat slot(s) due and unsent today: ${DUE_HEARTBEATS[*]} — sending a fixed status ping."
+    HB_LINES=""
+    for h in "${DUE_HEARTBEATS[@]}"; do
+        if [[ "${h}" == "${HOUR}" ]]; then
+            HB_LINES="${HB_LINES}${h}:00 check, on time.\n"
+        else
+            HB_LINES="${HB_LINES}${h}:00 check, sent late at $(date +%H:%M) — machine was likely asleep.\n"
+        fi
+    done
+    HEARTBEAT="Monitor alive, no changes.\n${HB_LINES}${STATUS_LINES:-(nothing tracked)}"
+    if push_ntfy "Lab server PBS — heartbeat" "white_check_mark" "${HEARTBEAT}"; then
+        for h in "${DUE_HEARTBEATS[@]}"; do update_state "heartbeat:${TODAY}:${h}" "sent"; done
+    else
+        log "Heartbeat push failed; that slot stays unsent and will be retried next check."
+    fi
+    # tracked-item state is independent of the heartbeat outcome — nothing there to retry either way
+    commit_state
 else
     log "No changes."
     commit_state
