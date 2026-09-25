@@ -13,6 +13,17 @@
 # "iteration_N" out of the filename), so this continues with iterations 3, 4, 5 -- no
 # --iterations override needed. --no-cleanup kept for the same reason as before (need the
 # intermediate trees to judge convergence/behaviour at this scale).
+#
+# FIXED 2026-09-25 after the first resume attempt (job 3143) died in 48s: `--tree-builder
+# hybrid` unconditionally sets first_tree_builder="fasttree" internally (common.py,
+# process_input_arguments), and return_algorithm_choices() unconditionally sys.exit()s (no
+# args -> exit 0!) the moment BOTH first_tree_builder and starting_tree (set by --resume) are
+# non-None -- regardless of which iteration is being resumed. --tree-builder hybrid + --resume
+# is simply broken together in Gubbins 3.3.5. Fix: use --tree-builder raxml directly (no
+# --first-tree-builder flag at all) -- since starting_iteration=3 here, Gubbins would only ever
+# use args.tree_builder (never first_tree_builder, which is only consulted at i==1) anyway, so
+# this is functionally identical to what hybrid would have used for iterations 2+ -- no change
+# to the actual method, purely a CLI-argument workaround.
 #PBS -N gubbins_full_hybrid_521_resume
 #PBS -q workq
 #PBS -l select=1:ncpus=24:mem=60gb:host=pne3
@@ -26,7 +37,7 @@ cd $W/results/gubbins/full_hybrid_521
 test -s core521.iteration_2.tre  # the checkpoint we're resuming from must exist
 echo "START (resume from iteration 2): $(date)"
 apptainer exec $W/nextflow/work/singularity/gubbins.sif \
-  run_gubbins.py --threads 24 --tree-builder hybrid --no-cleanup --prefix full_hybrid_521 \
+  run_gubbins.py --threads 24 --tree-builder raxml --no-cleanup --prefix full_hybrid_521 \
   --resume core521.iteration_2.tre core521.aln
 test -s full_hybrid_521.final_tree.tre
 echo "END: $(date)"
