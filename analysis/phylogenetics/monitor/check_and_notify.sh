@@ -18,7 +18,16 @@
 #     for Nextflow-orchestrated runs, where individual PBS job IDs are
 #     dispatched dynamically and can't be enumerated in advance; watching the
 #     expected final output file appear is a cleaner completion signal.
-#   - .state.json (gitignored) holds last-seen status per job_id/file.
+#   - List a glob to watch for its highest "iteration_N" match in watched_globs.tsv
+#     (remote_glob<TAB>label), e.g. a Gubbins run dir's `prefix.iteration_*.tre` —
+#     for a long-running job whose PBS job_state stays "R" for its whole multi-day
+#     run (a tracked_jobs.tsv entry alone is blind to progress within that run, so a
+#     Gubbins iteration finishing looked like "nothing changed" — user report,
+#     2026-09-25). Reports the highest completed iteration number as its tracked
+#     value, so an iteration finishing is a real, notifiable state change and shows
+#     up in heartbeats too, independent of which underlying PBS job is running it
+#     (survives a kill+resume onto a new job ID, since it just reads the directory).
+#   - .state.json (gitignored) holds last-seen status per job_id/file/glob.
 #   - .monitor.log (gitignored) is a running log for debugging.
 #
 # Scheduled via user cron (`crontab -l`): hourly 08:00-22:00 (`0 8-22 * * *`) plus an @reboot run.
@@ -47,6 +56,7 @@ HEARTBEAT_HOURS=("08" "11" "14" "17")
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TRACKED_JOBS="${SCRIPT_DIR}/tracked_jobs.tsv"
 WATCHED_FILES="${SCRIPT_DIR}/watched_files.tsv"
+WATCHED_GLOBS="${SCRIPT_DIR}/watched_globs.tsv"
 STATE_FILE="${SCRIPT_DIR}/.state.json"
 LOG_FILE="${SCRIPT_DIR}/.monitor.log"
 
@@ -59,8 +69,8 @@ log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >> "${LOG_FILE}"; }
 
 log "--- check started ---"
 
-if [[ ! -s "${TRACKED_JOBS}" && ! -s "${WATCHED_FILES}" ]]; then
-    log "Nothing tracked yet (${TRACKED_JOBS}, ${WATCHED_FILES} both empty/missing); nothing to check."
+if [[ ! -s "${TRACKED_JOBS}" && ! -s "${WATCHED_FILES}" && ! -s "${WATCHED_GLOBS}" ]]; then
+    log "Nothing tracked yet (${TRACKED_JOBS}, ${WATCHED_FILES}, ${WATCHED_GLOBS} all empty/missing); nothing to check."
     exit 0
 fi
 
@@ -164,6 +174,32 @@ while IFS=$'\t' read -r remote_path label; do
 
     PENDING_KEYS+=("file:${remote_path}"); PENDING_VALS+=("${current}")
 done < "${WATCHED_FILES}"
+fi
+
+if [[ -s "${WATCHED_GLOBS}" ]]; then
+while IFS=$'\t' read -r remote_glob label; do
+    [[ -z "${remote_glob}" || "${remote_glob}" == \#* ]] && continue
+
+    # highest "iteration_N" among the glob's matches, or empty if none exist yet. The pipeline's
+    # last stage (tail) exits 0 even on no matches, so a non-255 ssh rc here just means "checked
+    # successfully, found nothing" — not a failure.
+    out=$(ssh "${SSH_OPTS[@]}" "${SSH_HOST}" "ls -1 ${remote_glob} 2>/dev/null | grep -oE 'iteration_[0-9]+' | grep -oE '[0-9]+' | sort -n | tail -1" 2>/dev/null); rc=$?
+    if [[ ${rc} -eq 255 ]]; then
+        log "ssh FAILED for glob ${remote_glob}; state unknown, skipping."
+        continue
+    fi
+    current="${out:-none}"
+
+    prev=$(get_prev_state "iter:${remote_glob}")
+
+    if [[ "${current}" != "${prev}" ]]; then
+        CHANGES="${CHANGES}${label}: iteration ${prev:-<none>} -> ${current}\n"
+        log "CHANGE ${remote_glob} (${label}): '${prev:-<none>}' -> '${current}'"
+    fi
+    STATUS_LINES="${STATUS_LINES}${label}: iteration ${current}\n"
+
+    PENDING_KEYS+=("iter:${remote_glob}"); PENDING_VALS+=("${current}")
+done < "${WATCHED_GLOBS}"
 fi
 
 commit_state() {
