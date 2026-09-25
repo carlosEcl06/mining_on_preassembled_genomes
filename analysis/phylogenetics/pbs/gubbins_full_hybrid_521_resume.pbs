@@ -1,0 +1,32 @@
+#!/bin/bash
+# Resume of job 3135 (full Gubbins run, 521-genome cohort, hybrid = FastTree + RAxML), killed
+# deliberately 2026-09-25 right after iteration 2 finished (63h55m13s for that one iteration
+# alone -- far past the original 96h budget's remaining runway for iterations 3-5). See the
+# plan, "Job 3135 badly exceeding estimate -- recovery plan" and its follow-up for the full
+# rationale and the walltime projection (~149h raw for iterations 3-5 from the N=175 hybrid
+# speed test's iteration-decline ratios applied to the real 63.92h iteration-2 duration;
+# 288h requested here, user's choice, ~1.9x margin over that projection).
+#
+# Runs in the SAME working directory as the original job -- core521.aln and both completed
+# iteration trees (core521.iteration_1.tre, core521.iteration_2.tre) are already there.
+# --resume core521.iteration_2.tre sets starting_iteration = 3 internally (Gubbins parses the
+# "iteration_N" out of the filename), so this continues with iterations 3, 4, 5 -- no
+# --iterations override needed. --no-cleanup kept for the same reason as before (need the
+# intermediate trees to judge convergence/behaviour at this scale).
+#PBS -N gubbins_full_hybrid_521_resume
+#PBS -q workq
+#PBS -l select=1:ncpus=24:mem=60gb:host=pne3
+#PBS -l walltime=288:00:00
+#PBS -o /data2/projects/LGMB-009/NGS/analysis/phylogenetics/results/gubbins/full_hybrid_521_resume.out
+#PBS -e /data2/projects/LGMB-009/NGS/analysis/phylogenetics/results/gubbins/full_hybrid_521_resume.err
+
+set -ex
+W=/data2/projects/LGMB-009/NGS/analysis/phylogenetics
+cd $W/results/gubbins/full_hybrid_521
+test -s core521.iteration_2.tre  # the checkpoint we're resuming from must exist
+echo "START (resume from iteration 2): $(date)"
+apptainer exec $W/nextflow/work/singularity/gubbins.sif \
+  run_gubbins.py --threads 24 --tree-builder hybrid --no-cleanup --prefix full_hybrid_521 \
+  --resume core521.iteration_2.tre core521.aln
+test -s full_hybrid_521.final_tree.tre
+echo "END: $(date)"
