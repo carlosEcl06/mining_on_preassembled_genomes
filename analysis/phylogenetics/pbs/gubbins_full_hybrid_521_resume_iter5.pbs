@@ -1,0 +1,40 @@
+#!/bin/bash
+# Resume of job 3144 (full Gubbins run, 521-genome cohort), killed deliberately 2026-09-29
+# right after iteration 4 finished, ~2h45m into iteration 5's RAxML search -- Felipe needed to
+# update server libraries and restart all machines, and iteration 5 (the LAST iteration, default
+# 5-iteration cap) can't survive an uncontrolled reboot mid-search any better than iteration 2
+# could before. Same logic as the iteration-2->3 resume: cut losses at the smallest amount
+# they'll ever be, rather than risk losing much more to a restart at an unknown later time.
+#
+# Runs in the SAME working directory as job 3144 -- core521.aln and all four completed
+# iteration trees are already there. --resume core521.iteration_4.tre sets starting_iteration=5
+# (last iteration; Gubbins hits "Maximum number of iterations (5) reached" and finishes after
+# this one -- no further resume should be needed after this job, barring another crash).
+#
+# --tree-builder raxml (not hybrid): same fix as before (see
+# gubbins_full_hybrid_521_resume.pbs's header) -- hybrid+resume is broken together in Gubbins
+# 3.3.5 regardless of which iteration is being resumed; raxml alone is functionally identical
+# for iteration >1 since first_tree_builder is only ever consulted at i==1.
+#
+# Walltime: 120h. Iteration 4 (most recent, most relevant real data point) took 57h45m; the
+# iteration-to-iteration trend has NOT been monotonically declining (iter3=50h08m, iter4=57h45m
+# -- iter4 was longer), so this is sized as ~2x the most recent iteration rather than trusting
+# any further decline. This run only needs to cover ONE iteration, unlike the 288h budget for
+# iterations 3-5 combined before.
+#PBS -N gubbins_full_hybrid_521_resume_iter5
+#PBS -q workq
+#PBS -l select=1:ncpus=24:mem=60gb:host=pne3
+#PBS -l walltime=120:00:00
+#PBS -o /data2/projects/LGMB-009/NGS/analysis/phylogenetics/results/gubbins/full_hybrid_521_resume_iter5.out
+#PBS -e /data2/projects/LGMB-009/NGS/analysis/phylogenetics/results/gubbins/full_hybrid_521_resume_iter5.err
+
+set -ex
+W=/data2/projects/LGMB-009/NGS/analysis/phylogenetics
+cd $W/results/gubbins/full_hybrid_521
+test -s core521.iteration_4.tre  # the checkpoint we're resuming from must exist
+echo "START (resume from iteration 4): $(date)"
+apptainer exec $W/nextflow/work/singularity/gubbins.sif \
+  run_gubbins.py --threads 24 --tree-builder raxml --no-cleanup --prefix full_hybrid_521 \
+  --resume core521.iteration_4.tre core521.aln
+test -s full_hybrid_521.final_tree.tre
+echo "END: $(date)"
