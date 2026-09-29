@@ -33,3 +33,4 @@ analysis/phylogenetics/nextflow/trace-*.txt
 analysis/phylogenetics/*.out
 analysis/phylogenetics/*.err
 analysis/phylogenetics/*.pbs
+analysis/scripts/results_521/
