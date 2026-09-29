@@ -33,6 +33,15 @@ import pathlib
 import subprocess
 import tempfile
 from collections import defaultdict
+from typing import Dict, List, Tuple
+
+
+def _unlink_if_exists(path):
+    # Path.unlink() with the 3.8+ keyword arg needs a newer Python than this server has (3.6).
+    try:
+        pathlib.Path(path).unlink()
+    except FileNotFoundError:
+        pass
 from io import StringIO
 
 import numpy as np
@@ -88,7 +97,7 @@ def parse_args():
 # FASTA / alignment helpers
 # ---------------------------------------------------------------------------
 
-def read_fasta(path: pathlib.Path) -> dict[str, str]:
+def read_fasta(path: pathlib.Path) -> Dict[str, str]:
     """Parse a FASTA file into {header: sequence} dict."""
     seqs = {}
     header, buf = None, []
@@ -114,7 +123,7 @@ _HMMALIGN_FAILURES_SHOWN = 0
 _MAX_FAILURES_SHOWN = 3
 
 
-def run_hmmscan_domtbl(fasta: dict[str, str], pfam_hmm: str) -> list[tuple[str, str]]:
+def run_hmmscan_domtbl(fasta: Dict[str, str], pfam_hmm: str) -> List[Tuple[str, str]]:
     """
     Run hmmscan once for this BGC's full protein set against Pfam-A.hmm,
     returning (bare_accession, protein_id) for every domain hit. Scans all
@@ -144,7 +153,7 @@ def run_hmmscan_domtbl(fasta: dict[str, str], pfam_hmm: str) -> list[tuple[str, 
         subprocess.run(
             ["hmmscan", "--domtblout", tmp_tbl_path, "--noali", "-E", "1e-5",
              pfam_hmm, tmp_fa_path],
-            capture_output=True, check=True
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True
         )
         hits = []
         with open(tmp_tbl_path) as fh:
@@ -168,11 +177,11 @@ def run_hmmscan_domtbl(fasta: dict[str, str], pfam_hmm: str) -> list[tuple[str, 
                   f"     stderr: {e.stderr.decode(errors='replace').strip()}", flush=True)
         return []
     finally:
-        pathlib.Path(tmp_fa_path).unlink(missing_ok=True)
-        pathlib.Path(tmp_tbl_path).unlink(missing_ok=True)
+        _unlink_if_exists(tmp_fa_path)
+        _unlink_if_exists(tmp_tbl_path)
 
 
-def align_sequences(seqs: dict[str, str], domain: str, pfam_hmm: str) -> dict[str, str]:
+def align_sequences(seqs: Dict[str, str], domain: str, pfam_hmm: str) -> Dict[str, str]:
     """
     Run hmmalign to align sequences against a Pfam HMM profile.
     Returns {seq_id: aligned_sequence} with gap characters intact.
@@ -193,14 +202,14 @@ def align_sequences(seqs: dict[str, str], domain: str, pfam_hmm: str) -> dict[st
         # hmmfetch extracts one profile from Pfam-A.hmm by accession
         fetch = subprocess.run(
             ["hmmfetch", pfam_hmm, domain],
-            capture_output=True, check=True
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True
         )
         with open(tmp_hmm_path, "wb") as fh:
             fh.write(fetch.stdout)
 
         result = subprocess.run(
             ["hmmalign", "--trim", "--outformat", "afa", tmp_hmm_path, tmp_fa_path],
-            capture_output=True, check=True
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True
         )
         aligned = {}
         header, buf = None, []
@@ -230,8 +239,8 @@ def align_sequences(seqs: dict[str, str], domain: str, pfam_hmm: str) -> dict[st
                   f"     stderr: {e.stderr.decode(errors='replace').strip()}", flush=True)
         return {}
     finally:
-        pathlib.Path(tmp_hmm_path).unlink(missing_ok=True)
-        pathlib.Path(tmp_fa_path).unlink(missing_ok=True)
+        _unlink_if_exists(tmp_hmm_path)
+        _unlink_if_exists(tmp_fa_path)
 
 
 def pairwise_identity(seq_a: str, seq_b: str) -> float:
@@ -248,24 +257,36 @@ def pairwise_identity(seq_a: str, seq_b: str) -> float:
     return matches / total if total > 0 else 0.0
 
 
-def build_accession_index(pfam_hmm_path: str) -> dict[str, str]:
+def build_accession_index(pfam_hmm_path: str) -> Dict[str, str]:
     """
-    Map bare Pfam accession (no version) -> full versioned accession, by
-    scanning 'ACC' lines in the flat-text Pfam-A.hmm file. hmmfetch requires
-    an exact match on the versioned accession (e.g. 'PF00109.28'); a bare
-    accession fails even when the domain is present and correctly pressed.
+    Map bare Pfam accession (no version) -> full versioned accession. hmmfetch
+    requires an exact match on the versioned accession (e.g. 'PF00109.28'); a
+    bare accession fails even when the domain is present and correctly pressed.
+
+    FIXED 2026-09-28: originally scanned 'ACC' lines in the flat-text
+    Pfam-A.hmm file directly, but this server's Pfam-A.hmm is press-only (no
+    flat-text file present alongside the .h3f/.h3i/.h3m/.h3p indices) -- use
+    `hmmstat` against the pressed database instead, which reports the same
+    versioned accession per profile (column 3) without needing the flat file.
     """
     accession_map = {}
-    with open(pfam_hmm_path, errors="replace") as fh:
-        for line in fh:
-            if line.startswith("ACC "):
-                full = line.split()[1].strip()
-                bare = full.split(".")[0]
-                accession_map[bare] = full
+    result = subprocess.run(
+        ["hmmstat", pfam_hmm_path],
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True
+    )
+    for line in result.stdout.decode(errors="replace").splitlines():
+        if not line.strip() or line.startswith("#"):
+            continue
+        fields = line.split()
+        if len(fields) < 3:
+            continue
+        full = fields[2].strip()
+        bare = full.split(".")[0]
+        accession_map[bare] = full
     return accession_map
 
 
-def hungarian_best_identity(seqs_i: list[str], seqs_j: list[str]) -> float:
+def hungarian_best_identity(seqs_i: List[str], seqs_j: List[str]) -> float:
     """
     Given two lists of aligned domain sequences, use the Hungarian algorithm
     to find the pairing configuration that maximises total sequence identity,
@@ -295,7 +316,7 @@ def main():
 
     # --- fail fast: verify HMMER binaries and a pressed Pfam-A.hmm exist ---
     for binary in ("hmmscan", "hmmfetch", "hmmalign"):
-        check = subprocess.run(["which", binary], capture_output=True)
+        check = subprocess.run(["which", binary], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         if check.returncode != 0:
             raise SystemExit(f"[03] ERROR: '{binary}' not found in PATH. "
                               f"Activate the gcf_clustering conda env first.")
@@ -314,7 +335,7 @@ def main():
 
     # Resolve BACKBONE_DOMAINS to versioned accessions, warning about any
     # missing from this Pfam-A.hmm release rather than failing later.
-    resolved_backbone_domains: dict[str, list[str]] = {}
+    resolved_backbone_domains: Dict[str, List[str]] = {}
     for cls, doms in BACKBONE_DOMAINS.items():
         resolved = []
         for d in doms:
@@ -331,7 +352,7 @@ def main():
     if smoke_domain is None:
         raise SystemExit("[03] ERROR: none of the BACKBONE_DOMAINS accessions were "
                           f"found in {args.pfam_hmm}. Check the Pfam release in use.")
-    smoke = subprocess.run(["hmmfetch", args.pfam_hmm, smoke_domain], capture_output=True)
+    smoke = subprocess.run(["hmmfetch", args.pfam_hmm, smoke_domain], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     if smoke.returncode != 0:
         raise SystemExit(
             f"[03] ERROR: hmmfetch smoke test failed against {args.pfam_hmm} "
@@ -361,23 +382,23 @@ def main():
 
     # Cache FASTA files, hmmscan hits, and aligned sequences per bgc_id/domain
     # to avoid redundant hmmscan/hmmfetch/hmmalign calls.
-    fasta_cache:   dict[str, dict[str, str]] = {}
-    hmmscan_cache: dict[str, list[tuple[str, str]]] = {}
-    domain_cache:  dict[tuple, list[str]] = {}   # (bgc_id, domain) → aligned seqs
+    fasta_cache:   Dict[str, Dict[str, str]] = {}
+    hmmscan_cache: Dict[str, List[Tuple[str, str]]] = {}
+    domain_cache:  Dict[tuple, List[str]] = {}   # (bgc_id, domain) -> aligned seqs
 
-    def get_fasta(bgc_id: str) -> dict[str, str]:
+    def get_fasta(bgc_id: str) -> Dict[str, str]:
         if bgc_id not in fasta_cache:
             fa_path = fasta_dir / f"{bgc_id}.faa"
             fasta_cache[bgc_id] = read_fasta(fa_path) if fa_path.exists() else {}
         return fasta_cache[bgc_id]
 
-    def get_hmmscan_hits(bgc_id: str) -> list[tuple[str, str]]:
+    def get_hmmscan_hits(bgc_id: str) -> List[Tuple[str, str]]:
         if bgc_id not in hmmscan_cache:
             fasta = get_fasta(bgc_id)
             hmmscan_cache[bgc_id] = run_hmmscan_domtbl(fasta, pfam_hmm)
         return hmmscan_cache[bgc_id]
 
-    def get_aligned_domain_seqs(bgc_id: str, domain: str) -> list[str]:
+    def get_aligned_domain_seqs(bgc_id: str, domain: str) -> List[str]:
         key = (bgc_id, domain)
         if key not in domain_cache:
             fasta       = get_fasta(bgc_id)

@@ -38,6 +38,7 @@ Usage:
 import argparse
 import pathlib
 import re
+from typing import List
 
 import pandas as pd
 
@@ -53,7 +54,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def parse_domain_array(raw: str) -> list[str]:
+def parse_domain_array(raw: str) -> List[str]:
     """Split a PFAM_domains string into a deduplicated, sorted list of domain IDs.
 
     Note: this field mixes Pfam accessions (PFxxxxx) and Pfam family names

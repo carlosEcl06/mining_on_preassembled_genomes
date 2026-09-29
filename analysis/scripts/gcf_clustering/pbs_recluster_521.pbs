@@ -1,0 +1,71 @@
+#!/bin/bash
+# Re-runs the GCF clustering pipeline (00 -> 04) from scratch on the deduplicated 521-genome
+# cohort, for the BSB short paper's camera-ready reconsideration (see the discussion, 2026-09-28:
+# ~33 of the original 554 genomes are near-duplicates/same-patient pairs or <1.4Mb assemblies,
+# which violate the independence assumption Fisher/CMH/logistic regression rely on -- the same
+# reason the phylogenomics side of the project already moved to this 521-genome cohort). This
+# is a FULL re-cluster, not a post-hoc filter of the existing 554-genome gcf_assignments.tsv:
+# duplicate BGCs can also bias DBSCAN's density-based clustering itself, not just the downstream
+# per-genome stats, so re-running from the domain-array stage is the more rigorous choice.
+#
+# FIXED 2026-09-28 after job 3150 died in 2s: `conda` itself (not just this specific env) SIGILL-
+# crashes on this cluster -- confirmed on both pne2 AND pne4, so it's not a login-node-vs-compute-
+# node issue, the miniconda install's python3 binary itself is built for an incompatible
+# instruction set. HMMER binaries from that same conda env work fine (compiled C, unaffected) --
+# it's specifically conda's own python. Fix: skip conda/miniconda entirely; use the system
+# /usr/bin/python3 (3.6.8, proven reliable everywhere else in this project) in a throwaway venv
+# with pip-installed deps (tested directly: pandas/sklearn/etc. all import fine, no crash), and
+# the standalone HMMER 3.1b2 binaries already used as a fallback below.
+#
+# 03_backbone_identity.py has its own hmmfetch smoke test at startup -- the server's Pfam-A.hmm
+# is press-only (root-owned .h3f/.h3i/.h3m/.h3p under /data2/biotools/get_homologues/db/, no
+# plain-text flatfile found anywhere); if hmmfetch can't work against a press-only database,
+# that smoke test will fail within the first minute, not silently mid-run.
+#
+# Original 554-genome run (for comparison): 554 genomes, 2076 BGCs post-filter, 382,278 Jaccard
+# pairs, step 03 (hmmalign) took 9312s (~2.6h), total pipeline ~2.6h dominated by that one step.
+# 521 genomes should be comparable or somewhat faster; walltime sized generously regardless.
+#PBS -N gcf_recluster_521
+#PBS -q workq
+#PBS -l select=1:ncpus=4:mem=16gb:host=pne4
+#PBS -l walltime=12:00:00
+#PBS -o /data2/projects/LGMB-009/NGS/analysis/scripts/gcf_clustering/recluster_521.out
+#PBS -e /data2/projects/LGMB-009/NGS/analysis/scripts/gcf_clustering/recluster_521.err
+
+set -ex
+NGS=/data2/projects/LGMB-009/NGS
+SCRIPT_DIR=$NGS/analysis/scripts/gcf_clustering
+RESULTS_DIR=$NGS/analysis/scripts/results_521
+
+mkdir -p "$RESULTS_DIR"
+
+# --- filter combgc_complete_summary.tsv to the 521-genome cohort ---
+COMBGC_FULL=$NGS/analysis/R/copied_from_funcscan_results/combgc_complete_summary.tsv
+COMBGC_521=$RESULTS_DIR/combgc_complete_summary_521.tsv
+awk -F'\t' 'NR==FNR{keep[$1]=1; next} FNR==1 || ($1 in keep)' \
+  "$SCRIPT_DIR/ids_521.txt" "$COMBGC_FULL" > "$COMBGC_521"
+test -s "$COMBGC_521"
+echo "Filtered combgc: $(wc -l < "$COMBGC_521") lines (521 genomes + header expected data rows to follow)"
+
+VENV=$RESULTS_DIR/venv
+/usr/bin/python3 -m venv "$VENV"
+source "$VENV/bin/activate"
+pip install --quiet --upgrade pip
+pip install --quiet -r "$SCRIPT_DIR/requirements.txt"
+export PATH="/data2/biotools/hmmer-3.1b2-linux-intel-x86_64/bin:$PATH"
+which hmmalign hmmfetch hmmscan
+python3 -c "import pandas, numpy, scipy, sklearn, Bio, tqdm, matplotlib; print('deps OK')"
+
+export COMBGC_INPUT="$COMBGC_521"
+export RESULTS_DIR="$RESULTS_DIR"
+export ANTISMASH_DIR=$NGS/analysis/funcscan/results/bgc/antismash
+export DEEPBGC_DIR=$NGS/analysis/funcscan/results/bgc/deepbgc
+export FASTA_DIR=$RESULTS_DIR/fastas_proteins   # fresh extraction; original machine's FASTA_DIR is no longer reachable
+export PFAM_HMM=/data2/biotools/get_homologues/db/Pfam-A.hmm
+export PYTHON="$VENV/bin/python3"
+
+echo "START: $(date)"
+cd "$SCRIPT_DIR"
+bash run_clustering.sh
+test -s "$RESULTS_DIR/gcf_assignments.tsv"
+echo "END: $(date)"

@@ -39,6 +39,7 @@ import argparse
 import pathlib
 import re
 import sys
+from typing import Dict
 
 from Bio import SeqIO  # requires: biopython (see requirements.txt)
 
@@ -64,13 +65,13 @@ def parse_args():
     return parser.parse_args()
 
 
-def load_sample_records(gbk_path: pathlib.Path) -> dict[str, list]:
+def load_sample_records(gbk_path: pathlib.Path) -> Dict[str, list]:
     """Parse a sample's multi-record .bgc.gbk once, grouped by contig_id.
 
     Groups by record.name (parsed from the LOCUS line, the real contig_id),
     NOT record.id (the synthetic ACCESSION/VERSION string deepBGC assigns).
     """
-    by_contig: dict[str, list] = {}
+    by_contig: Dict[str, list] = {}
     for record in SeqIO.parse(str(gbk_path), "genbank"):
         by_contig.setdefault(record.name, []).append(record)
     return by_contig
@@ -140,7 +141,7 @@ def pick_record(candidates: list, bgc_start, bgc_end, bgc_length):
     return None
 
 
-def extract_translations(record) -> dict[str, str]:
+def extract_translations(record) -> Dict[str, str]:
     """Return {protein_id: translation} for all CDS features in a record."""
     seqs = {}
     for feature in record.features:
@@ -192,7 +193,7 @@ def main():
     n_ambiguous = 0
     n_empty = 0
 
-    sample_cache: dict[str, dict] = {}  # parsed .bgc.gbk per sample, grouped by contig_id
+    sample_cache: Dict[str, dict] = {}  # parsed .bgc.gbk per sample, grouped by contig_id
 
     for row in df.itertuples(index=False):
         bgc_id = row.bgc_id

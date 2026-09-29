@@ -29,6 +29,7 @@ Usage:
 import argparse
 import pathlib
 import sys
+from typing import List, Dict
 
 from Bio import SeqIO  # requires: biopython (see requirements.txt)
 
@@ -52,7 +53,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def find_region_gbks(sample_dir: pathlib.Path, contig_id: str) -> list[pathlib.Path]:
+def find_region_gbks(sample_dir: pathlib.Path, contig_id: str) -> List[pathlib.Path]:
     """
     A contig can have multiple antiSMASH regions (region001, region002, ...).
     Return all matching region GBKs for this contig, sorted.
@@ -76,7 +77,7 @@ def region_span(gbk_path: pathlib.Path):
     return None
 
 
-def pick_region_gbk(candidates: list[pathlib.Path], bgc_start, bgc_end):
+def pick_region_gbk(candidates: List[pathlib.Path], bgc_start, bgc_end):
     """
     Choose the region GBK whose genomic span best overlaps [bgc_start, bgc_end].
     With a single candidate, return it directly (no coordinates needed).
@@ -102,7 +103,7 @@ def pick_region_gbk(candidates: list[pathlib.Path], bgc_start, bgc_end):
     return best if best_overlap is not None and best_overlap > 0 else None
 
 
-def extract_translations(gbk_path: pathlib.Path) -> dict[str, str]:
+def extract_translations(gbk_path: pathlib.Path) -> Dict[str, str]:
     """Parse a region GBK and return {protein_id: translation} for all CDS features."""
     seqs = {}
     for record in SeqIO.parse(str(gbk_path), "genbank"):
