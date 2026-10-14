@@ -214,14 +214,16 @@ which is what the figures below are built from.
 
 `metG` (shared GCF_0019/GCF_0031 locus) and `speA` (GCF_0030), restricted to
 the positions where a specific nucleotide allele is significantly associated
-with one clade. 165 columns total across both genes.
+with one clade. 165 columns total across both genes. The two narrow columns
+right before the data (per Wilson's request) show each genome's phenotype and
+continent of origin, same color coding as the root-split figures above.
 
 ::: {.fig-shell}
 <a href="#" onclick="openLightbox(this.querySelector('img').src); return false;">
 <img src="figs/fig_variable_sites.png" alt="Nucleotide variable sites alignment">
 </a>
 <div class="fig-note">
-Figure is 3,726 &times; 9,732 px (all 521 genomes) &mdash;
+Figure is 3,802 &times; 9,732 px (all 521 genomes) &mdash;
 <a href="#" onclick="openFullSize(this); return false;">open full-size in a new tab</a>
 </div>
 :::
@@ -238,7 +240,7 @@ most of that nucleotide-level signal is synonymous.
 <img src="figs/fig_variable_aa.png" alt="Amino-acid variable sites alignment">
 </a>
 <div class="fig-note">
-Figure is 2,849 &times; 9,678 px (all 521 genomes) &mdash;
+Figure is 2,925 &times; 9,678 px (all 521 genomes) &mdash;
 <a href="#" onclick="openFullSize(this); return false;">open full-size in a new tab</a>
 </div>
 :::

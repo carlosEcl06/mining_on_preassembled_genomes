@@ -76,6 +76,20 @@ MIN_CARRIERS = 3                  # "repetitive" threshold for testing an allele
 ALPHA = 0.05                      # BH-adjusted significance threshold
 P_FLOOR = 1e-12                   # p_adj at/below this maps to the fully-saturated color
 
+# Phenotype/continent annotation strips (Wilson asked for these alongside clade).
+# Same hex values as plot_circular_tree.R / plot_circular_tree_bgc_markers.R, so
+# a color means the same thing across every figure in this project.
+PHENOTYPE_COLORS = {"Cancer": (215, 25, 28), "Non-cancer": (44, 123, 182)}
+CONTINENT_COLORS = {
+    "Asia": (230, 159, 0),
+    "Europe": (0, 158, 115),
+    "North America": (139, 76, 184),
+    "South America": (77, 77, 77),
+}
+PHENOTYPE_ORDER = ["Cancer", "Non-cancer"]
+CONTINENT_ORDER = ["Asia", "Europe", "North America", "South America"]
+MISSING_ANNOT_COLOR = (225, 225, 222)  # genome with no metadata value (shouldn't happen)
+
 SCALE = 2               # overall resolution multiplier (crisper text when zoomed); bump
                         # this, not the individual pixel constants below, to resharpen
 LINE_W = max(1, round(SCALE))  # tree branches, guide dashes, legend strokes
@@ -92,7 +106,11 @@ DESC_ROW_PX = 12 * SCALE   # short protein-name line, between the gene label and
 LEGEND_H = 68 * SCALE   # reserved strip at the very top of the image for the color-scale legend
 LEGEND_BAR_W = 260 * SCALE
 LEGEND_BAR_H = 14 * SCALE
-LEGEND_GAP = 40 * SCALE  # horizontal gap between the two clades' legend bars
+LEGEND_GAP = 40 * SCALE  # horizontal gap between legend groups
+
+ANNOT_STRIP_W = 11 * SCALE     # width of each phenotype/continent annotation column
+ANNOT_GAP_AFTER = 16 * SCALE   # gap between the annotation strips and the real data matrix
+SWATCH = 11 * SCALE            # legend color-chip size for the two categorical legends
 
 
 def load_tree():
@@ -134,6 +152,16 @@ def load_clades():
         for row in r:
             label_of[row["id"]] = row["clade"]
     return label_of
+
+
+def load_metadata():
+    """id -> {'phenotype': ..., 'continent': ...}, from the same TSV as load_clades()."""
+    meta = {}
+    with open(CLADE_TSV) as f:
+        r = csv.DictReader(f, delimiter="\t")
+        for row in r:
+            meta[row["id"]] = {"phenotype": row["phenotype"], "continent": row["continent"]}
+    return meta
 
 
 def build_subtree_labels(tree, label_of):
@@ -236,6 +264,57 @@ def draw_gradient_legend(draw, x0, y0, direction, title, font_title, font_tick):
         draw.text((tx_, bar_y + LEGEND_BAR_H + 4 * SCALE), lab, fill=INK, font=font_tick, anchor=anchor)
 
 
+def draw_categorical_legend(draw, x0, y0, title, order, colors, font_title, font_label):
+    """Compact one-row swatch+label legend starting at (x0, y0); returns the x
+    position right after the last label, so legends can be chained left to right."""
+    draw.text((x0, y0), title, fill=INK, font=font_title, anchor="lt")
+    sw_y = y0 + 16 * SCALE
+    cx = x0
+    for name in order:
+        draw.rectangle([cx, sw_y, cx + SWATCH, sw_y + SWATCH], fill=colors[name], outline=INK, width=LINE_W)
+        cx += SWATCH + 4 * SCALE
+        draw.text((cx, sw_y + SWATCH / 2), name, fill=INK, font=font_label, anchor="lm")
+        cx += font_label.getlength(name) + 16 * SCALE
+    return cx
+
+
+def draw_vertical_label(img, text, cx, y0, y1, font, fill):
+    """Pastes `text` rotated 90 degrees (reads top-to-bottom), vertically centered
+    in [y0, y1] and horizontally centered on cx -- used for the narrow phenotype/
+    continent annotation-strip headers, too thin for horizontal text."""
+    tmp_draw = ImageDraw.Draw(Image.new("RGB", (1, 1)))
+    bbox = tmp_draw.textbbox((0, 0), text, font=font)
+    w, h = bbox[2] - bbox[0], bbox[3] - bbox[1]
+    txt_img = Image.new("RGBA", (w + 4, h + 4), (0, 0, 0, 0))
+    ImageDraw.Draw(txt_img).text((2 - bbox[0], 2 - bbox[1]), text, font=font, fill=fill)
+    rotated = txt_img.rotate(90, expand=True)
+    px = round(cx - rotated.width / 2)
+    py = round((y0 + y1) / 2 - rotated.height / 2)
+    img.paste(rotated, (px, py), rotated)
+
+
+def draw_annotation_strips(draw, img, terminals, metadata, strip_x0, row_y, hdr_top, header_px, font_strip_header):
+    """Draws the phenotype + continent annotation columns at strip_x0 (one solid
+    color cell per genome, immediately left of the real data matrix), plus a
+    vertical header label for each."""
+    pheno_x0 = strip_x0
+    cont_x0 = strip_x0 + ANNOT_STRIP_W
+    for ri, term in enumerate(terminals):
+        meta = metadata.get(term.name, {})
+        pcolor = PHENOTYPE_COLORS.get(meta.get("phenotype"), MISSING_ANNOT_COLOR)
+        ccolor = CONTINENT_COLORS.get(meta.get("continent"), MISSING_ANNOT_COLOR)
+        y0 = row_y(ri)
+        draw.rectangle([pheno_x0, y0, pheno_x0 + ANNOT_STRIP_W, y0 + CELL_H], fill=pcolor)
+        draw.rectangle([cont_x0, y0, cont_x0 + ANNOT_STRIP_W, y0 + CELL_H], fill=ccolor)
+    last_y = row_y(len(terminals) - 1) + CELL_H
+    draw.rectangle([pheno_x0, row_y(0), cont_x0 + ANNOT_STRIP_W, last_y], outline=INK, width=LINE_W)
+    draw.line([(cont_x0, row_y(0)), (cont_x0, last_y)], fill=INK, width=LINE_W)
+    draw_vertical_label(img, "Phenotype", pheno_x0 + ANNOT_STRIP_W / 2, hdr_top, hdr_top + header_px,
+                         font_strip_header, INK)
+    draw_vertical_label(img, "Continent", cont_x0 + ANNOT_STRIP_W / 2, hdr_top, hdr_top + header_px,
+                         font_strip_header, INK)
+
+
 def compute_clade_significant_cells(panels, by_pos, label_of):
     """For every (position, non-ref allele) carried by >=MIN_CARRIERS genomes, test
     allele-presence x clade with Fisher's exact, BH-correct across all tests, and
@@ -298,6 +377,7 @@ def main():
     x, y = compute_xy(tree, terminals)
     max_x = max(x.values())
     label_of = load_clades()
+    metadata = load_metadata()
     subtree_labels = build_subtree_labels(tree, label_of)
 
     by_pos = load_matrix()
@@ -332,7 +412,7 @@ def main():
 
     header_px = LABEL_ROW_PX + DESC_ROW_PX + max_digits * CELL_H + CELL_H  # label + desc + digits + REF row
     matrix_w_px = total_cols * CELL_W + PANEL_GAP_PX * (len(panels) - 1)
-    img_w = LEFT_MARGIN + TREE_W_PX + matrix_w_px + RIGHT_MARGIN
+    img_w = LEFT_MARGIN + TREE_W_PX + 2 * ANNOT_STRIP_W + ANNOT_GAP_AFTER + matrix_w_px + RIGHT_MARGIN
     img_h = LEGEND_H + TOP_MARGIN + header_px + n_rows * CELL_H + 10 * SCALE
     print("image size:", img_w, "x", img_h, file=sys.stderr)
 
@@ -344,13 +424,20 @@ def main():
     font_desc = ImageFont.truetype(FONT_PATH, 8 * SCALE)
     font_legend_title = ImageFont.truetype(FONT_BOLD_PATH, 9 * SCALE)
     font_legend_tick = ImageFont.truetype(FONT_PATH, 7 * SCALE)
+    font_strip_header = ImageFont.truetype(FONT_BOLD_PATH, 6 * SCALE)
 
     draw_gradient_legend(draw, LEFT_MARGIN, 6 * SCALE, "A", "Clade A association (BH p_adj)",
                           font_legend_title, font_legend_tick)
     draw_gradient_legend(draw, LEFT_MARGIN + LEGEND_BAR_W + LEGEND_GAP, 6 * SCALE, "B",
                           "Clade B association (BH p_adj)", font_legend_title, font_legend_tick)
+    legend3_x0 = LEFT_MARGIN + 2 * LEGEND_BAR_W + 2 * LEGEND_GAP
+    legend3_end = draw_categorical_legend(draw, legend3_x0, 6 * SCALE, "Phenotype", PHENOTYPE_ORDER,
+                                           PHENOTYPE_COLORS, font_legend_title, font_legend_tick)
+    draw_categorical_legend(draw, legend3_end + LEGEND_GAP, 6 * SCALE, "Continent", CONTINENT_ORDER,
+                             CONTINENT_COLORS, font_legend_title, font_legend_tick)
 
-    mat_x0 = LEFT_MARGIN + TREE_W_PX
+    strip_x0 = LEFT_MARGIN + TREE_W_PX
+    mat_x0 = strip_x0 + 2 * ANNOT_STRIP_W + ANNOT_GAP_AFTER
     mat_y0 = LEGEND_H + TOP_MARGIN + header_px
     hdr_top = LEGEND_H + TOP_MARGIN
 
@@ -373,14 +460,17 @@ def main():
         for c in clade.clades:
             draw.line([(cx, ty(y[c])), (tx(x[c]), ty(y[c]))], fill=color_for(c, subtree_labels), width=LINE_W)
 
-    # extend each tip's branch with a light dotted guide line out to the matrix's
-    # left edge, so every row lines up with its alignment columns regardless of
-    # how deep that tip's actual branch length placed it
+    # extend each tip's branch with a light dotted guide line out to the start of
+    # the phenotype/continent annotation strips, so every row lines up with its
+    # metadata and alignment columns regardless of how deep that tip's actual
+    # branch length placed it
     for t in terminals:
         tip_x = tx(x[t])
         ty_v = ty(y[t])
-        if tip_x < mat_x0:
-            dotted_hline(draw, ty_v, tip_x, mat_x0, GUIDE_COLOR)
+        if tip_x < strip_x0:
+            dotted_hline(draw, ty_v, tip_x, strip_x0, GUIDE_COLOR)
+
+    draw_annotation_strips(draw, img, terminals, metadata, strip_x0, row_y, hdr_top, header_px, font_strip_header)
 
     # --- column index + panel bounds ---
     col_cursor = 0

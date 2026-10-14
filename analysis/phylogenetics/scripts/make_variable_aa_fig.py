@@ -119,6 +119,7 @@ def main():
     x, y = base.compute_xy(tree, terminals)
     max_x = max(x.values())
     label_of = base.load_clades()
+    metadata = base.load_metadata()
     subtree_labels = base.build_subtree_labels(tree, label_of)
 
     ref_genome_seq = load_reference_seq()
@@ -171,6 +172,7 @@ def main():
     font_desc = ImageFont.truetype(base.FONT_PATH, 8 * base.SCALE)
     font_legend_title = ImageFont.truetype(base.FONT_BOLD_PATH, 9 * base.SCALE)
     font_legend_tick = ImageFont.truetype(base.FONT_PATH, 7 * base.SCALE)
+    font_strip_header = ImageFont.truetype(base.FONT_BOLD_PATH, 6 * base.SCALE)
 
     # With few displayed columns (amino-acid panels filter hard), the gene-name/
     # description text can be wider than the data block itself -- reserve at least
@@ -184,7 +186,8 @@ def main():
 
     header_px = base.LABEL_ROW_PX + base.DESC_ROW_PX + max_digits * base.CELL_H + base.CELL_H
     matrix_w_px = sum(alloc_w) + base.PANEL_GAP_PX * (len(panels) - 1)
-    img_w = base.LEFT_MARGIN + base.TREE_W_PX + matrix_w_px + base.RIGHT_MARGIN
+    img_w = (base.LEFT_MARGIN + base.TREE_W_PX + 2 * base.ANNOT_STRIP_W + base.ANNOT_GAP_AFTER
+             + matrix_w_px + base.RIGHT_MARGIN)
     img_h = base.LEGEND_H + base.TOP_MARGIN + header_px + n_rows * base.CELL_H + 10 * base.SCALE
     print("image size:", img_w, "x", img_h, file=sys.stderr)
 
@@ -195,8 +198,14 @@ def main():
                                font_legend_title, font_legend_tick)
     base.draw_gradient_legend(draw, base.LEFT_MARGIN + base.LEGEND_BAR_W + base.LEGEND_GAP, 6 * base.SCALE, "B",
                                "Clade B association (BH p_adj)", font_legend_title, font_legend_tick)
+    legend3_x0 = base.LEFT_MARGIN + 2 * base.LEGEND_BAR_W + 2 * base.LEGEND_GAP
+    legend3_end = base.draw_categorical_legend(draw, legend3_x0, 6 * base.SCALE, "Phenotype", base.PHENOTYPE_ORDER,
+                                                base.PHENOTYPE_COLORS, font_legend_title, font_legend_tick)
+    base.draw_categorical_legend(draw, legend3_end + base.LEGEND_GAP, 6 * base.SCALE, "Continent",
+                                  base.CONTINENT_ORDER, base.CONTINENT_COLORS, font_legend_title, font_legend_tick)
 
-    mat_x0 = base.LEFT_MARGIN + base.TREE_W_PX
+    strip_x0 = base.LEFT_MARGIN + base.TREE_W_PX
+    mat_x0 = strip_x0 + 2 * base.ANNOT_STRIP_W + base.ANNOT_GAP_AFTER
     mat_y0 = base.LEGEND_H + base.TOP_MARGIN + header_px
     hdr_top = base.LEGEND_H + base.TOP_MARGIN
 
@@ -223,8 +232,11 @@ def main():
     for t in terminals:
         tip_x = tx(x[t])
         ty_v = ty(y[t])
-        if tip_x < mat_x0:
-            base.dotted_hline(draw, ty_v, tip_x, mat_x0, base.GUIDE_COLOR)
+        if tip_x < strip_x0:
+            base.dotted_hline(draw, ty_v, tip_x, strip_x0, base.GUIDE_COLOR)
+
+    base.draw_annotation_strips(draw, img, terminals, metadata, strip_x0, row_y, hdr_top, header_px,
+                                 font_strip_header)
 
     def panel_x0(panel_i):
         return mat_x0 + sum(alloc_w[k] for k in range(panel_i)) + panel_i * base.PANEL_GAP_PX
