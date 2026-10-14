@@ -240,7 +240,7 @@ most of that nucleotide-level signal is synonymous.
 <img src="figs/fig_variable_aa.png" alt="Amino-acid variable sites alignment">
 </a>
 <div class="fig-note">
-Figure is 2,925 &times; 9,678 px (all 521 genomes) &mdash;
+Figure is 2,150 &times; 9,706 px (all 521 genomes) &mdash;
 <a href="#" onclick="openFullSize(this); return false;">open full-size in a new tab</a>
 </div>
 :::

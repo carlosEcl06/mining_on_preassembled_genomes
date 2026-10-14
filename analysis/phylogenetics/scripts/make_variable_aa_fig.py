@@ -54,12 +54,18 @@ OUT = "analysis/phylogenetics/results/gcf_roles_followup/figs/fig_variable_aa.pn
 # landed on one unambiguous diagonal, offset +230bp from the CP079087 coordinates
 # (430668->430898 for metG, 436051->436281 for speA) -- a single local indel
 # between the two assemblies upstream of both genes, not two separate shifts.
+#   Labels are deliberately just the gene symbol: with only 7-12 columns
+#   displayed per panel (clade-significant positions only -- see CAPTION in
+#   main()), a longer label forces alloc_w to pad the data block out to fit
+#   the label text, spacing columns out much further than CELL_W. The locus/
+#   GCF mapping and the "clade-significant only" scope are both already
+#   stated in the surrounding report text and this module's own docstring.
 AA_GENE_PANELS = [
-    ("metG  (GCF_0019 / GCF_0031 locus), clade-significant positions only", 430898, 432851, True,
-     "Methionine--tRNA ligase"),
-    ("speA  (GCF_0030), clade-significant positions only", 436281, 438129, True,
-     "Arginine decarboxylase"),
+    ("metG", 430898, 432851, True, "Methionine--tRNA ligase"),
+    ("speA", 436281, 438129, True, "Arginine decarboxylase"),
 ]
+
+CAPTION = "All displayed positions are clade-significant amino-acid changes only (BH-adjusted p < 0.05)."
 
 
 def load_reference_seq():
@@ -184,11 +190,27 @@ def main():
         desc_w = font_desc.getlength(desc_by_label.get(label, ""))
         alloc_w.append(round(max(data_w, label_w, desc_w)) + 6 * base.SCALE)
 
+    CAPTION_H = 14 * base.SCALE  # reserved row for CAPTION -- kept separate from the legend
+                                  # row and from the per-panel header, so it doesn't pad out
+                                  # alloc_w the way the old inline "clade-significant only"
+                                  # wording did
     header_px = base.LABEL_ROW_PX + base.DESC_ROW_PX + max_digits * base.CELL_H + base.CELL_H
     matrix_w_px = sum(alloc_w) + base.PANEL_GAP_PX * (len(panels) - 1)
     img_w = (base.LEFT_MARGIN + base.TREE_W_PX + 2 * base.ANNOT_STRIP_W + base.ANNOT_GAP_AFTER
              + matrix_w_px + base.RIGHT_MARGIN)
-    img_h = base.LEGEND_H + base.TOP_MARGIN + header_px + n_rows * base.CELL_H + 10 * base.SCALE
+
+    # Now that panel width no longer gets padded out by long inline labels, the data
+    # side of the figure can end up narrower than the legend row itself -- measure the
+    # legend's real width (dry run on a throwaway canvas) and widen img_w to fit it.
+    dry_draw = ImageDraw.Draw(Image.new("RGB", (1, 1)))
+    dry_x = base.LEFT_MARGIN + 2 * base.LEGEND_BAR_W + 2 * base.LEGEND_GAP
+    dry_x = base.draw_categorical_legend(dry_draw, dry_x, 0, "Phenotype", base.PHENOTYPE_ORDER,
+                                          base.PHENOTYPE_COLORS, font_legend_title, font_legend_tick)
+    dry_x = base.draw_categorical_legend(dry_draw, dry_x + base.LEGEND_GAP, 0, "Continent",
+                                          base.CONTINENT_ORDER, base.CONTINENT_COLORS, font_legend_title,
+                                          font_legend_tick)
+    img_w = max(img_w, round(dry_x + base.RIGHT_MARGIN))
+    img_h = base.LEGEND_H + CAPTION_H + base.TOP_MARGIN + header_px + n_rows * base.CELL_H + 10 * base.SCALE
     print("image size:", img_w, "x", img_h, file=sys.stderr)
 
     img = Image.new("RGB", (img_w, img_h), base.SURFACE)
@@ -203,11 +225,12 @@ def main():
                                                 base.PHENOTYPE_COLORS, font_legend_title, font_legend_tick)
     base.draw_categorical_legend(draw, legend3_end + base.LEGEND_GAP, 6 * base.SCALE, "Continent",
                                   base.CONTINENT_ORDER, base.CONTINENT_COLORS, font_legend_title, font_legend_tick)
+    draw.text((base.LEFT_MARGIN, base.LEGEND_H), CAPTION, fill=base.INK, font=font_desc, anchor="la")
 
     strip_x0 = base.LEFT_MARGIN + base.TREE_W_PX
     mat_x0 = strip_x0 + 2 * base.ANNOT_STRIP_W + base.ANNOT_GAP_AFTER
-    mat_y0 = base.LEGEND_H + base.TOP_MARGIN + header_px
-    hdr_top = base.LEGEND_H + base.TOP_MARGIN
+    hdr_top = base.LEGEND_H + CAPTION_H + base.TOP_MARGIN
+    mat_y0 = hdr_top + header_px
 
     def row_y(ri):
         return mat_y0 + ri * base.CELL_H
