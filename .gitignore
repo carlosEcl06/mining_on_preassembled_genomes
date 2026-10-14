@@ -6,6 +6,12 @@ rawdata/metadata/12876_2025_4595_MOESM1_ESM.xlsx
 
 *.nextflow*
 
+# Python bytecode cache, anywhere in the tree
+__pycache__/
+
+# Claude Code's local, machine-specific permission settings (never shared)
+.claude/settings.local.json
+
 analysis/funcscan/work/
 analysis/funcscan/results/
 analysis/funcscan/pipeline/
@@ -13,6 +19,11 @@ analysis/funcscan/pipeline/
 analysis/R/RMarkdown/render/
 analysis/R/RMarkdown/*cache/
 analysis/R/RMarkdown/_freeze/
+# rendered output of gcf_results_full.qmd -- regenerable, same treatment as
+# every other RMarkdown render artifact above
+analysis/R/RMarkdown/gcf_results_full.html
+analysis/R/RMarkdown/gcf_results_full.pdf
+analysis/R/RMarkdown/gcf_results_full_files/
 
 analysis/scripts/results/
 
