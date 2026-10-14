@@ -1,0 +1,3 @@
+PATH=/home/carlos/.local/bin:/usr/local/bin:/usr/bin:/bin
+0 8-22 * * * /home/carlos/lab/projects/bgcs_in_cancer/mt/mining_on_preassembled_genomes/analysis/phylogenetics/monitor/check_and_notify.sh >> /home/carlos/lab/projects/bgcs_in_cancer/mt/mining_on_preassembled_genomes/analysis/phylogenetics/monitor/.monitor.log 2>&1
+@reboot sleep 180 && /home/carlos/lab/projects/bgcs_in_cancer/mt/mining_on_preassembled_genomes/analysis/phylogenetics/monitor/check_and_notify.sh >> /home/carlos/lab/projects/bgcs_in_cancer/mt/mining_on_preassembled_genomes/analysis/phylogenetics/monitor/.monitor.log 2>&1
