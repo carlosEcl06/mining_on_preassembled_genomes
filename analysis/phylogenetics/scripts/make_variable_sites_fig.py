@@ -306,9 +306,6 @@ def draw_annotation_strips(draw, img, terminals, metadata, strip_x0, row_y, hdr_
         y0 = row_y(ri)
         draw.rectangle([pheno_x0, y0, pheno_x0 + ANNOT_STRIP_W, y0 + CELL_H], fill=pcolor)
         draw.rectangle([cont_x0, y0, cont_x0 + ANNOT_STRIP_W, y0 + CELL_H], fill=ccolor)
-    last_y = row_y(len(terminals) - 1) + CELL_H
-    draw.rectangle([pheno_x0, row_y(0), cont_x0 + ANNOT_STRIP_W, last_y], outline=INK, width=LINE_W)
-    draw.line([(cont_x0, row_y(0)), (cont_x0, last_y)], fill=INK, width=LINE_W)
     draw_vertical_label(img, "Phenotype", pheno_x0 + ANNOT_STRIP_W / 2, hdr_top, hdr_top + header_px,
                          font_strip_header, INK)
     draw_vertical_label(img, "Continent", cont_x0 + ANNOT_STRIP_W / 2, hdr_top, hdr_top + header_px,
