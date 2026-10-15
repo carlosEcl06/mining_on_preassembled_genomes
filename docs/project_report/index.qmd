@@ -104,7 +104,7 @@ analysis, not a secondary check:
 
 |  | Genomes | Cancer | Non-cancer |
 |---|---|---|---|
-| Original cohort | 554 | — | — |
+| Original cohort | 554 | 179 | 375 |
 | **Deduplicated cohort (used throughout)** | **521** | **173** | **348** |
 
 Because this changes the independence assumption behind the paper's own
