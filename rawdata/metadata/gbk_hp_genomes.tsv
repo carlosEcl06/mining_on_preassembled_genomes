@@ -1,0 +1,555 @@
+Genome_ID	Age	Sex	Continent	Phenotype	Source
+GCA_015904695.1	62	female	North America	Non-gastric cancer 	NCBI
+GCA_024405915.1	43	female	Asia	Non-gastric cancer 	NCBI
+GCA_024405965.1	54	female	Asia	Non-gastric cancer 	NCBI
+GCA_024406135.1	53	female	Europe	Non-gastric cancer 	NCBI
+GCA_024406245.1	67	female	Europe	Non-gastric cancer 	NCBI
+GCA_024406335.1	50	male	Europe	Non-gastric cancer 	NCBI
+GCA_024406345.1	73	male	Europe	Non-gastric cancer 	NCBI
+GCA_024406375.1	61	female	Europe	Non-gastric cancer 	NCBI
+GCA_024406385.1	60	female	Europe	Non-gastric cancer 	NCBI
+GCA_024406415.1	73	male	Europe	Non-gastric cancer 	NCBI
+GCA_024406435.1	43	female	Europe	Non-gastric cancer 	NCBI
+GCA_024406445.1	48	female	Europe	Non-gastric cancer 	NCBI
+GCA_024406475.1	59	female	Europe	Non-gastric cancer 	NCBI
+GCA_024406485.1	51	male	Europe	Gastric cancer	NCBI
+GCA_024406505.1	61	male	Europe	Non-gastric cancer 	NCBI
+GCA_024406535.1	63	female	Europe	Non-gastric cancer 	NCBI
+GCA_024406555.1	36	female	Europe	Non-gastric cancer 	NCBI
+GCA_024406575.1	47	female	Europe	Non-gastric cancer 	NCBI
+GCA_024406595.1	72	female	Europe	Non-gastric cancer 	NCBI
+GCA_024406605.1	59	female	Europe	Non-gastric cancer 	NCBI
+GCA_024406635.1	65	female	Europe	Non-gastric cancer 	NCBI
+GCA_024406655.1	50	male	Asia	Non-gastric cancer 	NCBI
+GCA_024406665.1	59	female	Asia	Non-gastric cancer 	NCBI
+GCA_024406675.1	46	male	Asia	Non-gastric cancer 	NCBI
+GCA_024406715.1	75	female	Asia	Non-gastric cancer 	NCBI
+GCA_024406735.1	75	male	Asia	Non-gastric cancer 	NCBI
+GCA_024406755.1	68	male	Asia	Non-gastric cancer 	NCBI
+GCA_024406765.1	49	female	Asia	Non-gastric cancer 	NCBI
+GCA_024406785.1	56	female	Europe	Non-gastric cancer 	NCBI
+GCA_024406795.1	57	female	Europe	Non-gastric cancer 	NCBI
+GCA_024406835.1	47	male	Europe	Non-gastric cancer 	NCBI
+GCA_024406855.1	49	female	Europe	Non-gastric cancer 	NCBI
+GCA_024406865.1	58	female	Europe	Non-gastric cancer 	NCBI
+GCA_024406895.1	54	male	Europe	Non-gastric cancer 	NCBI
+GCA_024406915.1	60	male	Europe	Gastric cancer	NCBI
+GCA_024406935.1	78	male	Europe	Non-gastric cancer 	NCBI
+GCA_024406955.1	52	female	Europe	Non-gastric cancer 	NCBI
+GCA_024406975.1	53	female	Europe	Non-gastric cancer 	NCBI
+GCA_024406995.1	60	female	Europe	Non-gastric cancer 	NCBI
+GCA_024407015.1	33	male	Europe	Non-gastric cancer 	NCBI
+GCA_024407035.1	51	male	Europe	Non-gastric cancer 	NCBI
+GCA_024407045.1	40	male	Europe	Non-gastric cancer 	NCBI
+GCA_024407075.1	53	male	Europe	Non-gastric cancer 	NCBI
+GCA_024407095.1	29	male	Europe	Non-gastric cancer 	NCBI
+GCA_024407115.1	60	male	Europe	Non-gastric cancer 	NCBI
+GCA_024407135.1	70	male	Europe	non-gastric cancer 	NCBI
+GCA_024407155.1	58	male	Europe	Non-gastric cancer 	NCBI
+GCA_024407165.1	70	female	Europe	Non-gastric cancer 	NCBI
+GCA_024407295.1	77	female	Europe	Non-gastric cancer 	NCBI
+GCA_024407315.1	42	female	Europe	Non-gastric cancer 	NCBI
+GCA_024407335.1	75	female	Europe	Non-gastric cancer 	NCBI
+GCA_024407355.1	43	male	Europe	Non-gastric cancer 	NCBI
+GCA_024407375.1	53	female	Europe	Non-gastric cancer 	NCBI
+GCA_024407385.1	53	male	Europe	Non-gastric cancer 	NCBI
+GCA_024407395.1	46	male	Europe	Non-gastric cancer 	NCBI
+GCA_024407505.1	53	male	Europe	Non-gastric cancer 	NCBI
+GCA_024407555.1	72	female	Europe	Non-gastric cancer 	NCBI
+GCA_024407575.1	49	female	Europe	Non-gastric cancer 	NCBI
+GCA_024407595.1	48	male	Europe	Non-gastric cancer 	NCBI
+GCA_024407615.1	22	female	Europe	Non-gastric cancer 	NCBI
+GCA_024407655.1	31	female	Europe	Non-gastric cancer 	NCBI
+GCA_024409255.1	61	male	Asia	Non-gastric cancer 	NCBI
+GCA_024409265.1	32	female	Asia	Non-gastric cancer 	NCBI
+GCA_024409295.1	23	male	Asia	Non-gastric cancer 	NCBI
+GCA_024409305.1	55	female	Asia	Non-gastric cancer 	NCBI
+GCA_024409335.1	30	male	Asia	Non-gastric cancer 	NCBI
+GCA_024411815.1	76	male	Asia	Non-gastric cancer 	NCBI
+GCA_024411835.1	36	female	Asia	Non-gastric cancer 	NCBI
+GCA_024411855.1	28	male	Asia	Non-gastric cancer 	NCBI
+GCA_024411875.1	36	female	Asia	Gastric cancer 	NCBI
+GCA_024411895.1	24	male	Asia	Non-gastric cancer 	NCBI
+GCA_024411915.1	32	female	Asia	Non-gastric cancer 	NCBI
+GCA_024411935.1	28	female	Asia	Non-gastric cancer 	NCBI
+GCA_024411955.1	53	male	Europe	Non-gastric cancer 	NCBI
+GCA_024411965.1	50	male	Europe	Gastric cancer 	NCBI
+GCA_024411995.1	64	male	Europe	Gastric cancer 	NCBI
+GCA_024412005.1	45	female	Europe	Non-gastric cancer 	NCBI
+GCA_024412025.1	53	male	Europe	Gastric cancer 	NCBI
+GCA_024412135.1	74	male	Europe	Gastric cancer 	NCBI
+GCA_024412155.1	51	female	Europe	Non-gastric cancer 	NCBI
+GCA_024412275.1	58	male	Europe	Non-gastric cancer 	NCBI
+GCA_024412295.1	55	female	Europe	Non-gastric cancer 	NCBI
+GCA_024412315.1	52	female	Europe	Non-gastric cancer 	NCBI
+GCA_024412335.1	63	female	Europe	Non-gastric cancer 	NCBI
+GCA_024412355.1	49	female	Europe	Non-gastric cancer 	NCBI
+GCA_024412375.1	58	female	Europe	Non-gastric cancer 	NCBI
+GCA_024412405.1	7	male	Europe	Non-gastric cancer 	NCBI
+GCA_024412515.1	24	male	Europe	Non-gastric cancer 	NCBI
+GCA_024412535.1	64	female	Europe	Non-gastric cancer 	NCBI
+GCA_024412575.1	50	female	Europe	Non-gastric cancer 	NCBI
+GCA_024412595.1	14	male	Europe	Non-gastric cancer 	NCBI
+GCA_024412615.1	14	male	Europe	Non-gastric cancer 	NCBI
+GCA_024412655.1	48	female	Asia	Non-gastric cancer 	NCBI
+GCA_024412695.1	30	male	Asia	Non-gastric cancer 	NCBI
+GCA_024412715.1	32	male	Asia	Non-gastric cancer 	NCBI
+GCA_024412795.1	38	female	Asia	Non-gastric cancer 	NCBI
+GCA_024412805.1	25	male	Asia	Non-gastric cancer 	NCBI
+GCA_024412815.1	43	male	Asia	Non-gastric cancer 	NCBI
+GCA_024412855.1	15	female	Asia	Non-gastric cancer 	NCBI
+GCA_024412915.1	66	female	Asia	Non-gastric cancer 	NCBI
+GCA_024412995.1	69	female	Europe	Non-gastric cancer 	NCBI
+GCA_024413005.1	24	female	Europe	Non-gastric cancer 	NCBI
+GCA_024413025.1	65	female	Europe	Non-gastric cancer 	NCBI
+GCA_024413715.1	40	female	Asia	Non-gastric cancer 	NCBI
+GCA_024413815.1	52	male	Europe	Gastric cancer 	NCBI
+GCA_040857565.1	67	female	Europe	Non-gastric cancer 	NCBI
+GCA_040857585.1	73	male	Europe	Non-gastric cancer 	NCBI
+GCA_040857625.1	79	female	Europe	Gastric cancer 	NCBI
+GCA_040857645.1	77	female	Europe	Gastric cancer 	NCBI
+GCA_040860865.1	77	male	Europe	Non-gastric cancer 	NCBI
+GCA_040860925.1	67	male	Europe	Non-gastric cancer 	NCBI
+GCA_040860965.1	77	male	Europe	Gastric cancer 	NCBI
+GCA_040860985.1	74	female	Europe	Gastric cancer 	NCBI
+GCA_040861005.1	81	male	Europe	Gastric cancer 	NCBI
+GCA_040861025.1	79	male	Europe	Non-gastric cancer 	NCBI
+GCA_040861045.1	78	female	Europe	Gastric cancer 	NCBI
+GCA_040861065.1	75	female	Europe	Gastric cancer 	NCBI
+GCA_040861085.1	76	male	Europe	Gastric cancer 	NCBI
+GCA_040861105.1	78	male	Europe	Non-gastric cancer 	NCBI
+GCA_040861125.1	71	male	Europe	Non-gastric cancer 	NCBI
+GCA_040861145.1	72	female	Europe	Non-gastric cancer 	NCBI
+GCA_040861165.1	43	female	Europe	Non-gastric cancer 	NCBI
+GCA_040861185.1	71	male	Europe	Non-gastric cancer 	NCBI
+GCA_040861205.1	57	male	Europe	Gastric cancer 	NCBI
+GCA_040861225.1	72	male	Europe	Gastric cancer 	NCBI
+GCA_040861245.1	64	female	Europe	Non-gastric cancer 	NCBI
+GCA_040861265.1	65	female	Europe	Non-gastric cancer 	NCBI
+GCA_040861285.1	75	female	Europe	Non-gastric cancer 	NCBI
+GCA_040861305.1	49	male	Europe	Non-gastric cancer 	NCBI
+GCA_040861325.1	61	female	Europe	Gastric cancer 	NCBI
+GCA_040861345.1	55	female	Europe	Non-gastric cancer 	NCBI
+GCA_040861365.1	21	male	Europe	Non-gastric cancer 	NCBI
+GCA_040861385.1	67	female	Europe	Non-gastric cancer 	NCBI
+GCA_040861405.1	60	female	Europe	Gastric cancer 	NCBI
+GCA_040861445.1	56	female	Europe	Gastric cancer 	NCBI
+GCA_040861455.1	66	male	Europe	Gastric cancer 	NCBI
+GCA_040861485.1	42	female	Europe	Non-gastric cancer 	NCBI
+GCA_040861505.1	64	male	Europe	Non-gastric cancer 	NCBI
+GCA_040861525.1	70	male	Europe	Gastric cancer 	NCBI
+GCA_040861545.1	61	female	Europe	Non-gastric cancer 	NCBI
+GCA_040861565.1	52	male	Europe	Non-gastric cancer 	NCBI
+GCA_040861585.1	68	female	Europe	Gastric cancer 	NCBI
+GCA_040861605.1	62	male	Europe	Gastric cancer 	NCBI
+GCA_040861645.1	62	female	Europe	Non-gastric cancer 	NCBI
+GCA_040861665.1	28	female	Europe	Gastric cancer 	NCBI
+GCA_040861685.1	64	female	Europe	Non-gastric cancer 	NCBI
+GCA_040861705.1	80	female	Europe	Gastric cancer 	NCBI
+GCA_040861725.1	73	female	Europe	Gastric cancer 	NCBI
+GCA_040861745.1	54	female	Europe	Non-gastric cancer 	NCBI
+GCA_040861765.1	43	female	Europe	Non-gastric cancer 	NCBI
+GCA_040861785.1	74	female	Europe	Gastric cancer 	NCBI
+GCA_040861805.1	76	female	Europe	Non-gastric cancer 	NCBI
+GCA_040861825.1	62	female	Europe	Non-gastric cancer 	NCBI
+GCA_040861845.1	64	female	Europe	Non-gastric cancer 	NCBI
+GCA_040861865.1	68	female	Europe	Non-gastric cancer 	NCBI
+GCA_040861875.1	27	female	Europe	Non-gastric cancer 	NCBI
+GCA_040861895.1	47	female	Europe	Non-gastric cancer 	NCBI
+GCA_040861945.1	59	female	Europe	Gastric cancer 	NCBI
+GCA_040861965.1	47	male	Europe	Non-gastric cancer 	NCBI
+GCA_040861985.1	62	male	Europe	Gastric cancer 	NCBI
+GCA_040862005.1	78	female	Europe	Gastric cancer 	NCBI
+GCA_040862045.1	43	male	Europe	Non-gastric cancer 	NCBI
+GCA_040862065.1	75	male	Europe	Gastric cancer 	NCBI
+GCA_040862085.1	39	male	Europe	Non-gastric cancer 	NCBI
+GCA_040862115.1	59	female	Europe	Gastric cancer 	NCBI
+GCA_040862145.1	68	male	Europe	Non-gastric cancer 	NCBI
+GCA_040862165.1	62	male	Europe	Gastric cancer 	NCBI
+GCA_040862185.1	69	female	Europe	Non-gastric cancer 	NCBI
+GCA_040862205.1	44	female	Europe	Non-gastric cancer 	NCBI
+GCA_040862225.1	56	male	Europe	Non-gastric cancer 	NCBI
+GCA_040862245.1	62	male	Europe	Gastric cancer 	NCBI
+GCA_040862265.1	56	male	Europe	Non-gastric cancer 	NCBI
+GCA_040862285.1	54	male	Europe	Gastric cancer 	NCBI
+GCA_040862305.1	71	male	Europe	Gastric cancer 	NCBI
+GCA_040862325.1	58	male	Europe	Gastric cancer 	NCBI
+GCA_040862345.1	64	female	Europe	Gastric cancer 	NCBI
+GCA_040862365.1	67	female	Europe	Gastric cancer 	NCBI
+GCA_040862385.1	72	female	Europe	Non-gastric cancer 	NCBI
+GCA_040862405.1	43	female	Europe	Non-gastric cancer 	NCBI
+GCA_040862425.1	70	female	Europe	Gastric cancer 	NCBI
+GCA_040862445.1	63	female	Europe	Gastric cancer 	NCBI
+GCA_040862455.1	51	female	Europe	Non-gastric cancer 	NCBI
+GCA_040862485.1	59	female	Europe	Gastric cancer 	NCBI
+GCA_040862505.1	52	male	Europe	Non-gastric cancer 	NCBI
+GCA_040862525.1	25	female	Europe	Non-gastric cancer 	NCBI
+GCA_040862565.1	49	male	Europe	Non-gastric cancer 	NCBI
+GCA_040862585.1	57	female	Europe	Non-gastric cancer 	NCBI
+GCA_040862605.1	40	female	Europe	Non-gastric cancer 	NCBI
+GCF_001997965.1	53	male	South America	Non-gastric cancer 	NCBI
+GCF_001997995.1	45	male	South America	Non-gastric cancer 	NCBI
+GCF_001998045.1	47	male	South America	Gastric cancer 	NCBI
+GCF_001998125.1	45	male	South America	Non-gastric cancer 	NCBI
+GCF_001998165.1	55	male	South America	Gastric cancer 	NCBI
+GCF_001998205.1	45	male	South America	Non-gastric cancer 	NCBI
+GCF_001998245.1	42	male	South America	Gastric cancer 	NCBI
+GCF_001998285.1	43	male	South America	Gastric cancer 	NCBI
+GCF_001998295.1	53	male	South America	Non-gastric cancer 	NCBI
+GCF_001998385.1	57	male	South America	Gastric cancer 	NCBI
+GCF_001998405.1	45	male	South America	Gastric cancer 	NCBI
+GCF_001999845.1	54	male	South America	Non-gastric cancer 	NCBI
+GCF_001999865.1	40	male	South America	Gastric cancer 	NCBI
+GCF_002983705.1	48	male	North America	Non-gastric cancer 	NCBI
+GCF_003382505.1	77	male	Europe	Gastric cancer	NCBI
+GCF_003382515.1	77	male	Europe	Gastric cancer	NCBI
+GCF_003382545.1	77	male	Europe	Gastric cancer	NCBI
+GCF_003639165.1	42	male	Europe	Gastric cancer	NCBI
+GCF_003639195.1	70	female	Europe	Non-gastric cancer 	NCBI
+GCF_003639215.1	60	male	Europe	Non-gastric cancer 	NCBI
+GCF_003639245.1	36	male	Europe	Non-gastric cancer 	NCBI
+GCF_003639265.1	36	male	Europe	Non-gastric cancer 	NCBI
+GCF_003639285.1	63	male	Europe	Gastric cancer	NCBI
+GCF_003639305.1	66	male	Europe	Non-gastric cancer 	NCBI
+GCF_003639325.1	60	male	Europe	Gastric cancer	NCBI
+GCF_003639335.1	42	male	Europe	Non-gastric cancer 	NCBI
+GCF_003639365.1	75	female	Europe	Gastric cancer	NCBI
+GCF_003639385.1	63	male	Europe	Gastric cancer	NCBI
+GCF_003639405.1	64	male	Europe	Non-gastric cancer 	NCBI
+GCF_003639425.1	45	female	Europe	Non-gastric cancer 	NCBI
+GCF_003639445.1	60	male	Europe	Non-gastric cancer 	NCBI
+GCF_003639455.1	36	male	Europe	Non-gastric cancer 	NCBI
+GCF_003639485.1	42	female	Europe	Gastric cancer 	NCBI
+GCF_003639495.1	35	male	Europe	Gastric cancer 	NCBI
+GCF_003639525.1	56	male	Europe	Gastric cancer 	NCBI
+GCF_003639545.1	54	male	Europe	Gastric cancer 	NCBI
+GCF_003639565.1	62	male	Europe	Gastric cancer 	NCBI
+GCF_003639575.1	44	female	Europe	Gastric cancer 	NCBI
+GCF_003639605.1	62	male	Europe	Non-gastric cancer 	NCBI
+GCF_003639615.1	34	male	Europe	Gastric cancer 	NCBI
+GCF_003639635.1	47	male	Europe	Non-gastric cancer 	NCBI
+GCF_003639665.1	43	male	Europe	Non-gastric cancer 	NCBI
+GCF_003639675.1	41	female	Europe	Gastric cancer 	NCBI
+GCF_003639685.1	75	female	Europe	Non-gastric cancer 	NCBI
+GCF_003639725.1	60	female	Europe	Gastric cancer 	NCBI
+GCF_003639735.1	60	male	Europe	Non-gastric cancer 	NCBI
+GCF_003639745.1	61	male	Europe	Non-gastric cancer 	NCBI
+GCF_003639785.1	62	male	Europe	Non-gastric cancer 	NCBI
+GCF_003639795.1	51	male	Europe	Gastric cancer 	NCBI
+GCF_003639805.1	63	male	Europe	Non-gastric cancer 	NCBI
+GCF_003639845.1	61	male	Europe	Non-gastric cancer 	NCBI
+GCF_003639855.1	54	male	Europe	Gastric cancer 	NCBI
+GCF_003639865.1	65	male	Europe	Non-gastric cancer 	NCBI
+GCF_003639905.1	59	male	Europe	Non-gastric cancer 	NCBI
+GCF_003639915.1	53	male	Europe	Gastric cancer 	NCBI
+GCF_003639935.1	66	female	Europe	Non-gastric cancer 	NCBI
+GCF_003639965.1	37	male	Europe	Gastric cancer 	NCBI
+GCF_003639985.1	46	male	Europe	Non-gastric cancer 	NCBI
+GCF_003639995.1	67	male	Europe	Non-gastric cancer 	NCBI
+GCF_003640025.1	63	female	Europe	Gastric cancer 	NCBI
+GCF_003640045.1	56	female	Europe	Non-gastric cancer 	NCBI
+GCF_003640055.1	68	female	Europe	Non-gastric cancer 	NCBI
+GCF_003640085.1	69	male	Europe	Non-gastric cancer 	NCBI
+GCF_003640095.1	63	male	Europe	Non-gastric cancer 	NCBI
+GCF_003640105.1	80	male	Europe	Non-gastric cancer 	NCBI
+GCF_003640145.1	43	male	Europe	Gastric cancer 	NCBI
+GCF_003640155.1	67	male	Europe	Non-gastric cancer 	NCBI
+GCF_003939085.1	48	female	Europe	Non-gastric cancer 	NCBI
+GCF_006337345.1	50	female	Europe	Non-gastric cancer 	NCBI
+GCF_006337625.1	50	female	Europe	Non-gastric cancer 	NCBI
+GCF_006338045.1	30	male	Europe	Non-gastric cancer 	NCBI
+GCF_006339065.1	70	male	Europe	Gastric cancer 	NCBI
+GCF_008032975.1	40	female	North America	Non-gastric cancer 	NCBI
+GCF_008033055.1	40	male	North America	Non-gastric cancer 	NCBI
+GCF_011105755.1	33	female	North America	Non-gastric cancer 	NCBI
+GCF_011105765.1	41	female	North America	Gastric cancer 	NCBI
+GCF_011105795.1	58	female	North America	Gastric cancer 	NCBI
+GCF_011105805.1	52	female	North America	Gastric cancer	NCBI
+GCF_011140335.1	54	female	North America	Gastric cancer	NCBI
+GCF_011140365.1	82	female	North America	Gastric cancer	NCBI
+GCF_011140415.1	78	male	North America	Gastric cancer	NCBI
+GCF_011140425.1	36	female	North America	Gastric cancer	NCBI
+GCF_011140435.1	54	male	North America	Gastric cancer	NCBI
+GCF_011140475.1	54	male	North America	Gastric cancer	NCBI
+GCF_011140485.1	56	female	North America	Gastric cancer	NCBI
+GCF_011140515.1	58	female	North America	Gastric cancer	NCBI
+GCF_011140535.1	57	male	North America	Gastric cancer	NCBI
+GCF_011140545.1	38	female	North America	Gastric cancer	NCBI
+GCF_011140555.1	51	female	North America	Gastric cancer	NCBI
+GCF_011140595.1	81	female	North America	Gastric cancer	NCBI
+GCF_011140615.1	44	male	North America	Gastric cancer	NCBI
+GCF_011140625.1	46	female	North America	Gastric cancer 	NCBI
+GCF_011140655.1	64	female	North America	Gastric cancer 	NCBI
+GCF_011140665.1	55	female	North America	Gastric cancer 	NCBI
+GCF_011140675.1	52	male	North America	Gastric cancer 	NCBI
+GCF_011140715.1	51	female	North America	Gastric cancer 	NCBI
+GCF_011140735.1	72	female	North America	Gastric cancer 	NCBI
+GCF_011140745.1	58	male	North America	Gastric cancer 	NCBI
+GCF_011140755.1	76	male	North America	Gastric cancer 	NCBI
+GCF_011140795.1	47	female	North America	Gastric cancer 	NCBI
+GCF_011140805.1	52	female	North America	Gastric cancer 	NCBI
+GCF_011140825.1	44	female	North America	Gastric cancer 	NCBI
+GCF_011140845.1	39	male	North America	Non-gastric cancer 	NCBI
+GCF_011140875.1	70	male	North America	Gastric cancer 	NCBI
+GCF_011140895.1	41	male	North America	Non-gastric cancer 	NCBI
+GCF_011140915.1	48	male	North America	Non-gastric cancer 	NCBI
+GCF_011140925.1	44	male	North America	Non-gastric cancer 	NCBI
+GCF_011140935.1	44	female	North America	Non-gastric cancer 	NCBI
+GCF_011140955.1	57	female	North America	Non-gastric cancer 	NCBI
+GCF_011140995.1	69	female	North America	Non-gastric cancer 	NCBI
+GCF_011141015.1	38	female	North America	Non-gastric cancer 	NCBI
+GCF_011141035.1	66	female	North America	Non-gastric cancer 	NCBI
+GCF_011141045.1	44	female	North America	Non-gastric cancer 	NCBI
+GCF_011141055.1	30	female	North America	Non-gastric cancer 	NCBI
+GCF_011141095.1	61	female	North America	Non-gastric cancer 	NCBI
+GCF_011141115.1	41	female	North America	Non-gastric cancer 	NCBI
+GCF_011141135.1	36	female	North America	Non-gastric cancer 	NCBI
+GCF_011141145.1	60	female	North America	Non-gastric cancer 	NCBI
+GCF_011174935.1	39	female	South America	Non-gastric cancer 	NCBI
+GCF_011174975.1	49	female	South America	Gastric cancer 	NCBI
+GCF_011174985.1	60	female	South America	Gastric cancer 	NCBI
+GCF_011175015.1	46	female	South America	Gastric cancer 	NCBI
+GCF_011175035.1	46	female	South America	Gastric cancer 	NCBI
+GCF_011175045.1	57	male	South America	Gastric cancer 	NCBI
+GCF_011175075.1	37	male	South America	Gastric cancer 	NCBI
+GCF_011175085.1	52	female	South America	Gastric cancer 	NCBI
+GCF_011175115.1	62	female	South America	Gastric cancer 	NCBI
+GCF_011175135.1	52	male	South America	Non-gastric cancer 	NCBI
+GCF_011175145.1	30	female	South America	Gastric cancer 	NCBI
+GCF_011175195.1	51	female	South America	Gastric cancer 	NCBI
+GCF_011175215.1	53	female	South America	Gastric cancer 	NCBI
+GCF_011175225.1	33	male	South America	Non-gastric cancer 	NCBI
+GCF_011175235.1	59	male	South America	Non-gastric cancer 	NCBI
+GCF_011175275.1	29	female	South America	Gastric cancer 	NCBI
+GCF_011175295.1	46	female	South America	Gastric cancer 	NCBI
+GCF_011175315.1	42	female	South America	Gastric cancer 	NCBI
+GCF_011175325.1	32	female	South America	Gastric cancer 	NCBI
+GCF_011175335.1	35	female	South America	Gastric cancer 	NCBI
+GCF_011175375.1	23	female	South America	Gastric cancer 	NCBI
+GCF_014496045.1	25	female	North America	Non-gastric cancer 	NCBI
+GCF_014496145.1	47	male	North America	Non-gastric cancer 	NCBI
+GCF_014496155.1	49	female	North America	Non-gastric cancer 	NCBI
+GCF_014496385.1	28	female	North America	Non-gastric cancer 	NCBI
+GCF_014496395.1	35	female	North America	Non-gastric cancer 	NCBI
+GCF_014496475.1	31	female	North America	Non-gastric cancer 	NCBI
+GCF_014496695.1	80	male	North America	Non-gastric cancer 	NCBI
+GCF_014496705.1	45	female	North America	Non-gastric cancer 	NCBI
+GCF_014496765.1	29	female	North America	Non-gastric cancer 	NCBI
+GCF_014496775.1	53	male	North America	Non-gastric cancer 	NCBI
+GCF_014496805.1	22	male	North America	Non-gastric cancer 	NCBI
+GCF_014496815.1	44	female	North America	Non-gastric cancer 	NCBI
+GCF_014496825.1	38	male	North America	Non-gastric cancer 	NCBI
+GCF_014496865.1	49	male	North America	Non-gastric cancer 	NCBI
+GCF_014496885.1	69	female	North America	Gastric cancer 	NCBI
+GCF_014496895.1	45	female	North America	Non-gastric cancer 	NCBI
+GCF_014496905.1	39	female	North America	Non-gastric cancer 	NCBI
+GCF_014496915.1	81	female	North America	Non-gastric cancer 	NCBI
+GCF_014496965.1	16	female	North America	Non-gastric cancer 	NCBI
+GCF_014496985.1	31	male	North America	Non-gastric cancer 	NCBI
+GCF_014497025.1	11	female	Europe	Non-gastric cancer 	NCBI
+GCF_014497035.1	55	male	North America	Non-gastric cancer 	NCBI
+GCF_014497085.1	42	female	North America	Non-gastric cancer 	NCBI
+GCF_014497165.1	42	male	North America	Non-gastric cancer 	NCBI
+GCF_014497185.1	47	female	North America	Non-gastric cancer 	NCBI
+GCF_014497195.1	30	male	North America	Non-gastric cancer 	NCBI
+GCF_014497205.1	57	female	North America	Non-gastric cancer 	NCBI
+GCF_014497235.1	81	male	North America	Non-gastric cancer 	NCBI
+GCF_014497265.1	42	female	North America	Non-gastric cancer 	NCBI
+GCF_014497275.1	36	male	North America	Non-gastric cancer 	NCBI
+GCF_014497285.1	13	male	Europe	Non-gastric cancer 	NCBI
+GCF_014497305.1	47	male	North America	Non-gastric cancer 	NCBI
+GCF_014497335.1	14	female	Europe	Non-gastric cancer 	NCBI
+GCF_014497365.1	8	female	Europe	Non-gastric cancer 	NCBI
+GCF_014497385.1	48	female	North America	Non-gastric cancer 	NCBI
+GCF_014497405.1	13	female	Europe	Non-gastric cancer 	NCBI
+GCF_014497415.1	21	male	North America	Non-gastric cancer 	NCBI
+GCF_014497445.1	37	male	North America	Non-gastric cancer 	NCBI
+GCF_014497455.1	55	male	North America	Non-gastric cancer 	NCBI
+GCF_014497485.1	35	female	North America	Non-gastric cancer 	NCBI
+GCF_014497495.1	69	female	North America	Non-gastric cancer 	NCBI
+GCF_014497505.1	36	female	North America	Non-gastric cancer 	NCBI
+GCF_014497515.1	49	female	North America	Non-gastric cancer 	NCBI
+GCF_014497525.1	30	female	North America	Non-gastric cancer 	NCBI
+GCF_014497585.1	49	female	North America	Non-gastric cancer 	NCBI
+GCF_014497595.1	42	male	North America	Non-gastric cancer 	NCBI
+GCF_014497605.1	48	male	North America	Non-gastric cancer 	NCBI
+GCF_014497635.1	28	male	North America	Non-gastric cancer 	NCBI
+GCF_014497655.1	37	male	North America	Non-gastric cancer 	NCBI
+GCF_014497685.1	36	male	North America	Non-gastric cancer 	NCBI
+GCF_014497695.1	43	male	North America	Non-gastric cancer 	NCBI
+GCF_014497735.1	34	female	North America	Non-gastric cancer 	NCBI
+GCF_014497745.1	36	female	North America	Non-gastric cancer 	NCBI
+GCF_014497785.1	36	female	North America	Non-gastric cancer 	NCBI
+GCF_014497825.1	24	female	North America	Non-gastric cancer 	NCBI
+GCF_014497835.1	80	male	North America	Non-gastric cancer 	NCBI
+GCF_014498085.1	15	female	Europe	Non-gastric cancer 	NCBI
+GCF_014498125.1	15	male	Europe	Non-gastric cancer 	NCBI
+GCF_014498165.1	14	female	Europe	Non-gastric cancer 	NCBI
+GCF_014498185.1	18	male	Europe	Non-gastric cancer 	NCBI
+GCF_014498195.1	48	male	South America	Non-gastric cancer 	NCBI
+GCF_014498205.1	10	male	Europe	Non-gastric cancer 	NCBI
+GCF_014498245.1	11	male	Europe	Non-gastric cancer 	NCBI
+GCF_014498265.1	43	female	South America	Non-gastric cancer 	NCBI
+GCF_014498275.1	9	female	Europe	Non-gastric cancer 	NCBI
+GCF_014498295.1	64	male	South America	Non-gastric cancer 	NCBI
+GCF_014498305.1	11	female	Europe	Non-gastric cancer 	NCBI
+GCF_014498465.1	59	female	North America	Non-gastric cancer 	NCBI
+GCF_014498475.1	49	female	North America	Non-gastric cancer 	NCBI
+GCF_014498545.1	49	female	North America	Non-gastric cancer 	NCBI
+GCF_014498555.1	69	male	North America	Gastric cancer 	NCBI
+GCF_014498585.1	49	female	North America	Non-gastric cancer 	NCBI
+GCF_014498605.1	49	male	North America	Gastric cancer 	NCBI
+GCF_014498615.1	49	male	North America	Non-gastric cancer 	NCBI
+GCF_014498645.1	36	female	South America	Non-gastric cancer 	NCBI
+GCF_014498655.1	69	female	North America	Gastric cancer 	NCBI
+GCF_014498675.1	53	male	South America	Gastric cancer	NCBI
+GCF_014498745.1	48	female	South America	Non-gastric cancer 	NCBI
+GCF_014498755.1	48	female	South America	Non-gastric cancer 	NCBI
+GCF_014498765.1	47	female	South America	Non-gastric cancer 	NCBI
+GCF_014498775.1	13	female	South America	Non-gastric cancer 	NCBI
+GCF_014498785.1	75	female	South America	Gastric cancer	NCBI
+GCF_014498845.1	16	female	South America	Non-gastric cancer 	NCBI
+GCF_014498855.1	53	female	South America	Non-gastric cancer 	NCBI
+GCF_014498885.1	70	female	South America	Non-gastric cancer 	NCBI
+GCF_014498895.1	46	male	South America	Non-gastric cancer 	NCBI
+GCF_014498905.1	9	female	South America	Non-gastric cancer 	NCBI
+GCF_014498915.1	60	female	South America	Non-gastric cancer 	NCBI
+GCF_014498925.1	34	male	South America	Non-gastric cancer 	NCBI
+GCF_015904205.1	41	female	North America	Non-gastric cancer 	NCBI
+GCF_015904225.1	80	male	North America	Non-gastric cancer 	NCBI
+GCF_015904305.1	29	female	North America	Non-gastric cancer 	NCBI
+GCF_015904325.1	25	male	North America	Non-gastric cancer 	NCBI
+GCF_015904335.1	45	female	North America	Non-gastric cancer 	NCBI
+GCF_015904365.1	25	male	North America	Non-gastric cancer 	NCBI
+GCF_015904375.1	45	female	North America	Non-gastric cancer 	NCBI
+GCF_015904385.1	75	female	North America	Non-gastric cancer 	NCBI
+GCF_015904425.1	45	female	North America	Non-gastric cancer 	NCBI
+GCF_015904435.1	47	female	North America	Non-gastric cancer 	NCBI
+GCF_015904465.1	47	female	North America	Non-gastric cancer 	NCBI
+GCF_015904475.1	80	male	North America	Non-gastric cancer 	NCBI
+GCF_015904485.1	43	female	North America	Non-gastric cancer 	NCBI
+GCF_015904525.1	46	male	North America	Non-gastric cancer 	NCBI
+GCF_015904535.1	47	male	North America	Non-gastric cancer 	NCBI
+GCF_015904565.1	49	female	North America	Non-gastric cancer 	NCBI
+GCF_015904575.1	49	female	North America	Non-gastric cancer 	NCBI
+GCF_015904605.1	25	female	North America	Non-gastric cancer 	NCBI
+GCF_015904625.1	31	female	North America	Gastric cancer	NCBI
+GCF_015904645.1	62	male	North America	Gastric cancer	NCBI
+GCF_015904665.1	60	female	North America	Gastric cancer	NCBI
+GCF_015904675.1	75	male	North America	Gastric cancer	NCBI
+GCF_015904725.1	53	male	North America	Gastric cancer	NCBI
+GCF_015904745.1	42	male	North America	Gastric cancer	NCBI
+GCF_015904765.1	66	male	North America	Gastric cancer	NCBI
+GCF_015904775.1	63	male	North America	Gastric cancer	NCBI
+GCF_015904795.1	66	male	North America	Gastric cancer	NCBI
+GCF_015904815.1	60	female	North America	Non-gastric cancer 	NCBI
+GCF_015904825.1	62	female	North America	Non-gastric cancer 	NCBI
+GCF_015904865.1	62	male	North America	Non-gastric cancer 	NCBI
+GCF_015904875.1	24	male	North America	Non-gastric cancer 	NCBI
+GCF_015904905.1	67	female	North America	Non-gastric cancer 	NCBI
+GCF_015904915.1	65	female	North America	Gastric cancer 	NCBI
+GCF_015904925.1	49	female	North America	Non-gastric cancer 	NCBI
+GCF_015904965.1	57	male	North America	Gastric cancer 	NCBI
+GCF_015904975.1	38	female	North America	Non-gastric cancer 	NCBI
+GCF_015905005.1	69	female	North America	Non-gastric cancer 	NCBI
+GCF_015905015.1	45	female	North America	Non-gastric cancer 	NCBI
+GCF_015905025.1	27	female	North America	Non-gastric cancer 	NCBI
+GCF_015905065.1	23	female	North America	Non-gastric cancer 	NCBI
+GCF_015905075.1	67	male	North America	Non-gastric cancer 	NCBI
+GCF_015905105.1	27	female	North America	Non-gastric cancer 	NCBI
+GCF_015905125.1	70	female	North America	Non-gastric cancer 	NCBI
+GCF_015905135.1	54	female	North America	Non-gastric cancer 	NCBI
+GCF_015905165.1	64	female	North America	Gastric cancer 	NCBI
+GCF_021184145.1	54	male	North America	Non-gastric cancer 	NCBI
+GCF_024214055.1	32	male	Europe	Non-gastric cancer 	NCBI
+GCF_026222655.1	30	not applicable	Asia	Non-gastric cancer 	NCBI
+GCF_030062565.1	66	male	South America	Gastric cancer 	NCBI
+GCF_030062585.1	48	female	South America	Gastric cancer 	NCBI
+GCF_030062605.1	40	female	South America	Gastric cancer 	NCBI
+GCF_030062625.1	62	female	South America	Non-gastric cancer 	NCBI
+GCF_030062645.1	40	female	South America	Non-gastric cancer 	NCBI
+GCF_030062665.1	28	female	South America	Non-gastric cancer 	NCBI
+GCF_030062685.1	46	female	South America	Non-gastric cancer 	NCBI
+GCF_034498235.1	24	male	Asia	Non-gastric cancer 	NCBI
+GCF_035621155.1	74	female	Asia	Gastric cancer 	NCBI
+GCF_035621295.1	54	male	Asia	Non-gastric cancer 	NCBI
+GCF_035621315.1	69	female	Asia	Non-gastric cancer 	NCBI
+GCF_035621875.1	53	female	Asia	Non-gastric cancer 	NCBI
+GCF_036455175.1	56	female	North America	Non-gastric cancer 	NCBI
+GCF_036455215.1	61	female	North America	Non-gastric cancer 	NCBI
+GCF_036455265.1	36	female	North America	Non-gastric cancer 	NCBI
+GCF_037861715.1	56	male	Asia	Non-gastric cancer 	NCBI
+GCF_037861735.1	38	female	Asia	Non-gastric cancer 	NCBI
+GCF_037861755.1	55	female	Asia	Gastric cancer	NCBI
+GCF_037861775.1	32	female	Asia	Non-gastric cancer 	NCBI
+GCF_037861795.1	49	male	Asia	Non-gastric cancer 	NCBI
+GCF_037861895.1	50	female	Asia	Non-gastric cancer 	NCBI
+GCF_037861915.1	47	female	Asia	Non-gastric cancer 	NCBI
+GCF_037861965.1	36	male	Asia	Non-gastric cancer 	NCBI
+GCF_037861975.1	60	male	Asia	Non-gastric cancer 	NCBI
+GCF_037862055.1	28	male	Asia	Non-gastric cancer 	NCBI
+GCF_037862095.1	55	male	Asia	Non-gastric cancer 	NCBI
+GCF_037862115.1	35	male	Asia	Non-gastric cancer 	NCBI
+GCF_037862155.1	45	male	Asia	Non-gastric cancer 	NCBI
+GCF_037862195.1	52	male	Asia	Non-gastric cancer 	NCBI
+GCF_037862275.1	63	male	Asia	Non-gastric cancer 	NCBI
+GCF_037862295.1	31	male	Asia	Non-gastric cancer 	NCBI
+GCF_037862315.1	35	male	Asia	Non-gastric cancer 	NCBI
+GCF_037862355.1	30	male	Asia	Non-gastric cancer 	NCBI
+GCF_037862375.1	40	female	Asia	Non-gastric cancer 	NCBI
+GCF_037862475.1	15	female	Asia	Non-gastric cancer 	NCBI
+GCF_040820815.1	74	male	Europe	Gastric cancer 	NCBI
+GCF_040820825.1	62	female	Europe	Gastric cancer 	NCBI
+GCF_040820835.1	61	male	Europe	Non-gastric cancer 	NCBI
+GCF_040820845.1	82	male	Europe	Gastric cancer	NCBI
+GCF_040820855.1	87	male	Europe	Gastric cancer	NCBI
+GCF_040820915.1	79	female	Europe	Gastric cancer	NCBI
+GCF_040820935.1	69	male	Europe	Gastric cancer 	NCBI
+GCF_040820945.1	74	female	Europe	Non-gastric cancer 	NCBI
+GCF_040820965.1	51	male	Europe	Non-gastric cancer 	NCBI
+GCF_040820975.1	42	male	Europe	Gastric cancer 	NCBI
+GCF_040821035.1	74	male	Europe	Non-gastric cancer 	NCBI
+GCF_040821045.1	72	female	Europe	Gastric cancer 	NCBI
+GCF_040821065.1	67	male	Europe	Gastric cancer 	NCBI
+GCF_040821075.1	74	male	Europe	Non-gastric cancer 	NCBI
+GCF_040821085.1	74	male	Europe	Gastric cancer 	NCBI
+GCF_040821135.1	80	male	Europe	Gastric cancer 	NCBI
+GCF_040821155.1	64	male	Europe	Non-gastric cancer 	NCBI
+GCF_040821165.1	61	male	Europe	Gastric cancer 	NCBI
+GCF_040821195.1	69	male	Europe	Non-gastric cancer 	NCBI
+GCF_040821205.1	79	male	Europe	Gastric cancer	NCBI
+GCF_040821215.1	53	male	Europe	Gastric cancer	NCBI
+GCF_040821255.1	70	male	Europe	Gastric cancer	NCBI
+GCF_040821265.1	65	male	Europe	Gastric cancer	NCBI
+GCF_040821295.1	62	male	Europe	Gastric cancer	NCBI
+GCF_040821305.1	79	female	Europe	Non-gastric cancer 	NCBI
+GCF_040821325.1	71	female	Europe	Non-gastric cancer 	NCBI
+GCF_040821375.1	60	male	Europe	Gastric cancer 	NCBI
+GCF_040821395.1	72	female	Europe	Non-gastric cancer 	NCBI
+GCF_040821405.1	75	male	Europe	Non-gastric cancer 	NCBI
+GCF_040821415.1	76	female	Europe	Gastric cancer 	NCBI
+GCF_040821425.1	81	male	Europe	Non-gastric cancer 	NCBI
+GCF_040821475.1	76	female	Europe	Gastric cancer 	NCBI
+GCF_040821495.1	82	male	Europe	Gastric cancer	NCBI
+GCF_040821505.1	85	male	Europe	Gastric cancer	NCBI
+GCF_040821535.1	49	male	Europe	Non-gastric cancer 	NCBI
+GCF_040821545.1	73	male	Europe	Gastric cancer	NCBI
+GCF_040821565.1	81	male	Europe	Gastric cancer	NCBI
+GCF_040821595.1	62	male	Europe	Gastric cancer	NCBI
+GCF_040821605.1	71	male	Europe	Gastric cancer	NCBI
+GCF_040821615.1	72	female	Europe	Gastric cancer	NCBI
+GCF_040821655.1	85	male	Europe	Gastric cancer	NCBI
+GCF_040821675.1	86	male	Europe	Gastric cancer	NCBI
+GCF_040821695.1	81	male	Europe	Gastric cancer	NCBI
+GCF_040821705.1	81	male	Europe	Non-gastric cancer 	NCBI
+GCF_040821725.1	71	female	Europe	Gastric cancer	NCBI
+GCF_040821775.1	76	female	Europe	Gastric cancer 	NCBI
+GCF_040821795.1	72	female	Europe	Non-gastric cancer 	NCBI
+GCF_040821815.1	70	female	Europe	Gastric cancer 	NCBI
+GCF_040821825.1	81	male	Europe	Gastric cancer 	NCBI
+GCF_040821835.1	85	female	Europe	Non-gastric cancer 	NCBI
+GCF_040821875.1	82	female	Europe	Non-gastric cancer 	NCBI
+GCF_040821885.1	76	female	Europe	Gastric cancer 	NCBI
+GCF_040821915.1	61	female	Europe	Non-gastric cancer 	NCBI
+GCF_040821935.1	74	female	Europe	Non-gastric cancer 	NCBI
+GCF_040821975.1	81	male	Europe	Gastric cancer 	NCBI

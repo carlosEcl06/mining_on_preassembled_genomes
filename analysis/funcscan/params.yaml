@@ -1,0 +1,71 @@
+input: "samplesheet.csv"
+outdir: "./results"
+multiqc_title: "BGC mining on 554 pre-assembled H. pylori genomes from gastric cancer and chronic gastritis patients"
+
+# -------------------------
+# BGC SCREENING CONFIG
+# -------------------------
+run_bgc_screening: true
+bgc_mincontiglength: 3000
+bgc_savefilteredcontigs: true
+
+# -------------------------
+# FUNCTIONAL ANNOTATION CONFIG
+# -------------------------
+annotation_tool: "bakta"
+annotation_bakta_db: "./pipeline/third_party_databases/bakta/db"
+annotation_bakta_singlemode: true
+annotation_bakta_translationtable: 11
+annotation_bakta_gram: "-"
+annotation_bakta_complete: true
+annotation_bakta_renamecontigheaders: true
+annotation_bakta_compliant: true
+annotation_bakta_trna: true
+annotation_bakta_tmrna: true
+annotation_bakta_rrna: true
+annotation_bakta_ncrna: true
+annotation_bakta_ncrnaregion: true
+annotation_bakta_crispr: true
+annotation_bakta_pseudo: true
+annotation_bakta_gap: true
+annotation_bakta_ori: true
+annotation_bakta_activate_plot: true
+
+# -------------------------
+# PROTEIN ANNOTATION (InterProScan)
+# -------------------------
+run_protein_annotation: true
+protein_annotation_tool: "InterProScan"
+protein_annotation_interproscan_db: "./pipeline/third_party_databases/interproscan/db/interproscan-5.77-108.0"
+
+# -------------------------
+# antiSMASH CONFIG
+# -------------------------
+bgc_antismash_db: "./pipeline/third_party_databases/antismash"
+bgc_antismash_contigminlength: 3000
+bgc_antismash_cbgeneral: true
+bgc_antismash_cbknownclusters: true
+bgc_antismash_cbsubclusters: true
+bgc_antismash_ccmibig: true
+bgc_antismash_smcogtrees: true
+bgc_antismash_pfam2go: true
+bgc_antismash_rre: true
+bgc_antismash_taxon: "bacteria"
+bgc_antismash_tfbs: true
+bgc_antismash_hmmdetectionstrictness: "relaxed"
+
+# -------------------------
+# DeepBGC CONFIG
+# -------------------------
+bgc_deepbgc_db: "./pipeline/third_party_databases/deepbgc/data"
+bgc_deepbgc_prodigalsinglemode: true
+
+# -------------------------
+# GECCO CONFIG
+# -------------------------
+bgc_gecco_mask: true
+
+# -------------------------
+# OPTIONAL: HMMSEARCH
+# -------------------------
+bgc_run_hmmsearch: false

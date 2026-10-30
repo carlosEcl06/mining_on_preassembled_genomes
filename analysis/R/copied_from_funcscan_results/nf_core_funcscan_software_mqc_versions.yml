@@ -1,0 +1,22 @@
+ANTISMASH_ANTISMASH:
+  antismash: 8.0.1
+BAKTA_BAKTA:
+  bakta: 1.10.4
+COMBGC:
+  comBGC: null
+DEEPBGC_PIPELINE:
+  deepbgc: 0.1.31
+  prodigal: 2.6.3
+GECCO_RUN:
+  gecco: 0.9.10
+GUNZIP_INPUT_PREP:
+  gunzip: 1.13
+INTERPROSCAN:
+  interproscan: 5.59-91.0
+SEQKIT_SEQ_FILTER:
+  seqkit: v2.9.0
+SEQKIT_SEQ_LENGTH:
+  seqkit: v2.9.0
+Workflow:
+    nf-core/funcscan: v3.0.0
+    Nextflow: 25.10.4

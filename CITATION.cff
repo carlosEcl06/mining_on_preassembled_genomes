@@ -1,0 +1,26 @@
+cff-version: 1.2.0
+message: "If you use this repository, please cite it as below."
+title: "Mining Biosynthetic Gene Clusters in Helicobacter pylori Genomes"
+type: software
+version: 1.0.0
+date-released: 2026-10-30
+license: MIT
+repository-code: "https://github.com/carlosEcl06/mining_on_preassembled_genomes"
+authors:
+  - given-names: "Carlos Eugênio"
+    family-names: "Costa de Lima"
+    affiliation: "Ribeirão Preto Medical School, University of São Paulo"
+  - given-names: "Wilson Araújo"
+    family-names: "da Silva Junior"
+    affiliation: "Ribeirão Preto Medical School, University of São Paulo"
+preferred-citation:
+  type: conference-paper
+  title: "Mining Biosynthetic Gene Clusters in Helicobacter pylori Genomes Associated with Premalignant and Malignant Gastric Phenotypes: Preliminary Results and Next Steps"
+  authors:
+    - given-names: "Carlos Eugênio"
+      family-names: "Costa de Lima"
+    - given-names: "Wilson Araújo"
+      family-names: "da Silva Junior"
+  conference:
+    name: "Brazilian Symposium on Bioinformatics (BSB 2026)"
+  year: 2026

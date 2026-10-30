@@ -1,0 +1,22 @@
+# genomes and reference databases (downloaded, not versioned)
+rawdata/fastas/
+rawdata/pfam/
+rawdata/acessos.txt
+rawdata/ncbi_dataset*
+
+# funcscan run outputs
+analysis/funcscan/work/
+analysis/funcscan/results/
+analysis/funcscan/pipeline/
+.nextflow*
+
+# regenerable outputs
+analysis/R/figures/figures/
+analysis/scripts/results/
+analysis/scripts/results_521/fastas_proteins/
+analysis/scripts/results_521/jaccard_pairs.tsv
+analysis/scripts/results_521/backbone_identity.tsv
+analysis/scripts/results_521/run_clustering.log
+
+__pycache__/
+Rplots.pdf
